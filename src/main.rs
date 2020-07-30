@@ -6,8 +6,9 @@ mod rgbcolor;
 mod surface;
 mod vec3;
 
-use std::sync::mpsc::channel;
-use threadpool::ThreadPool;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use std::{thread, sync::mpsc::channel};
+use std::time::Duration;
 
 use camera::Camera;
 use ray::Ray;
@@ -65,10 +66,14 @@ fn render_surface(
     width: usize,
     height: usize,
     cam: Camera,
+    progress_bar: ProgressBar,
+    thread_no: usize,
 ) -> Surface {
+    progress_bar.set_message(&format!("Thread {}", thread_no));
+    
     let mut surface = Surface::new(x_offset, y_offset, width, height);
-
     for j in 0..height {
+        progress_bar.inc(1);
         for i in 0..width {
             let u = (i + x_offset) as f64 / (IMG_WIDTH - 1) as f64;
             let v = (j + y_offset) as f64 / (IMG_HEIGHT - 1) as f64;
@@ -76,7 +81,9 @@ fn render_surface(
             let color = get_color(ray);
             surface.set_color(i, j, color);
         }
+        thread::sleep(Duration::from_millis(50));
     }
+    progress_bar.finish_with_message("done");
 
     surface
 }
@@ -92,41 +99,53 @@ fn main() {
         DIST_TO_FOCUS,
     );
 
+    // let thread_count = (num_cpus::get() as f64 * (3.0 / 4.0)) as usize;
     let thread_count = num_cpus::get();
     let section_height = IMG_HEIGHT / thread_count;
     let last_section_extra_pixels = IMG_HEIGHT % thread_count;
-    let pool = ThreadPool::new(thread_count as usize);
     let (tx, rx) = channel();
-    
+
+    println!("Using {} threads", thread_count);
+    let multi_progress = MultiProgress::new();
+    let progress_style = ProgressStyle::default_bar()
+        .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+        .progress_chars("##-");
+
     for i in 0..thread_count {
         let local_camera = camera.clone();
+
         let child_tx = tx.clone();
         let surface_height = if i == thread_count - 1 {
             section_height + last_section_extra_pixels
         } else {
             section_height
         };
-        
-        pool.execute(move || {
+
+        let progress_bar = multi_progress.add(ProgressBar::new(surface_height as u64));
+        progress_bar.set_style(progress_style.clone());
+
+        thread::spawn(move || {
             child_tx
-            .send(render_surface(
-                0,
-                i * section_height,
-                IMG_WIDTH,
-                surface_height,
-                local_camera,
-            ))
-            .unwrap();
+                .send(render_surface(
+                    0,
+                    i * section_height,
+                    IMG_WIDTH,
+                    surface_height,
+                    local_camera,
+                    progress_bar,
+                    i,
+                ))
+                .unwrap();
         });
     }
-    drop(tx);
+    multi_progress.join().unwrap();
     
-    let mut img = Surface::new(0, 0,IMG_WIDTH, IMG_HEIGHT);
+    drop(tx);
+
+    let mut img = Surface::new(0, 0, IMG_WIDTH, IMG_HEIGHT);
     for result in rx.iter() {
         img.merge(&result);
     }
-    
-    println!("Using {} threads", thread_count);
 
     img.save("image.png").unwrap();
 }
