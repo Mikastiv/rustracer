@@ -7,8 +7,7 @@ mod surface;
 mod vec3;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::{thread, sync::mpsc::channel};
-use std::time::Duration;
+use std::{sync::mpsc::channel, thread};
 
 use camera::Camera;
 use ray::Ray;
@@ -70,7 +69,7 @@ fn render_surface(
     thread_no: usize,
 ) -> Surface {
     progress_bar.set_message(&format!("Thread {}", thread_no));
-    
+
     let mut surface = Surface::new(x_offset, y_offset, width, height);
     for j in 0..height {
         progress_bar.inc(1);
@@ -81,7 +80,6 @@ fn render_surface(
             let color = get_color(ray);
             surface.set_color(i, j, color);
         }
-        thread::sleep(Duration::from_millis(50));
     }
     progress_bar.finish_with_message("done");
 
@@ -99,8 +97,13 @@ fn main() {
         DIST_TO_FOCUS,
     );
 
-    // let thread_count = (num_cpus::get() as f64 * (3.0 / 4.0)) as usize;
-    let thread_count = num_cpus::get();
+    let available_threads = num_cpus::get();
+    let thread_count = if available_threads > 12 {
+        12
+    } else {
+        available_threads
+    };
+
     let section_height = IMG_HEIGHT / thread_count;
     let last_section_extra_pixels = IMG_HEIGHT % thread_count;
     let (tx, rx) = channel();
@@ -139,7 +142,7 @@ fn main() {
         });
     }
     multi_progress.join().unwrap();
-    
+
     drop(tx);
 
     let mut img = Surface::new(0, 0, IMG_WIDTH, IMG_HEIGHT);
