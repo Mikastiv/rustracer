@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use super::vec3::Vec3;
+use super::Vec3;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ray {

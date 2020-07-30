@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use super::rgbcolor::RGBColor;
+use super::RGBColor;
 
 pub struct Surface {
     x_offset: usize,

@@ -13,7 +13,7 @@ use camera::Camera;
 use ray::Ray;
 use rgbcolor::RGBColor;
 use surface::Surface;
-use vec3::Vec3;
+use vec3::{Color, Vec3};
 
 const ASPECT_RATIO: f32 = 16.0 / 9.0;
 const IMG_WIDTH: usize = 400;
@@ -51,24 +51,29 @@ fn hit(ray: Ray) -> bool {
     discriminant > 0.0
 }
 
-#[allow(clippy::many_single_char_names)]
-fn get_background_color(x: usize, y: usize) -> RGBColor {
-    let r = x as f64 / (IMG_WIDTH - 1) as f64;
-    let g = y as f64 / (IMG_HEIGHT - 1) as f64;
-    let b = 0.25;
+fn scale_color(color: Color) -> RGBColor {
+    let mut r = color.x;
+    let mut g = color.y;
+    let mut b = color.z;
+    
+    let scale = 1.0 / SAMPLE_PER_PIXEL as f64;
+    r = (scale * r).sqrt();
+    g = (scale * g).sqrt();
+    b = (scale * b).sqrt();
 
-    RGBColor {
-        r: (r * 255.99) as u8,
-        g: (g * 255.999) as u8,
-        b: (b * 255.999) as u8,
-    }
+    RGBColor::new(
+        (256.0 * math::clamp(r, 0.0, 0.999)) as u8,
+        (256.0 * math::clamp(g, 0.0, 0.999)) as u8,
+        (256.0 * math::clamp(b, 0.0, 0.999)) as u8,
+    )
 }
 
-fn get_color(x: usize, y: usize, ray: Ray) -> RGBColor {
+fn ray_color(ray: Ray) -> Color {
     if hit(ray) {
-        RGBColor { r: 255, g: 0, b: 0 }
+        Color::new(1.0, 0.0, 0.0)
     } else {
-        get_background_color(x, y)
+        let t = 0.5 * (ray.dir.y + 1.0);
+        t * Color::new(1.0, 1.0, 1.0) + (1.0 - t) * Color::new(0.4, 0.6, 1.0)
     }
 }
 
@@ -84,11 +89,14 @@ fn render_surface(
     for j in 0..height {
         progress_bar.inc(1);
         for i in 0..width {
-            let u = (i + x_offset) as f64 / (IMG_WIDTH - 1) as f64;
-            let v = (j + y_offset) as f64 / (IMG_HEIGHT - 1) as f64;
-            let ray = cam.get_ray(u, v);
-            let color = get_color(i + x_offset, j + y_offset, ray);
-            surface.set_color(i, j, color);
+            let mut color = Color::new(0.0, 0.0, 0.0);
+            for _s in 0..SAMPLE_PER_PIXEL {
+                let u = (i + x_offset) as f64 / (IMG_WIDTH - 1) as f64;
+                let v = (j + y_offset) as f64 / (IMG_HEIGHT - 1) as f64;
+                let ray = cam.get_ray(u, v);
+                color += ray_color(ray);
+            }
+            surface.set_color(i, j, scale_color(color));
         }
     }
     progress_bar.finish_with_message("Done");
@@ -144,8 +152,7 @@ fn main() {
         let progress_bar = multi_progress.add(ProgressBar::new(surface_height as u64));
         progress_bar.set_style(progress_style.clone());
         progress_bar.set_message("Scanlines remaining");
-        let prefix = format!("Thread {}", i);
-        progress_bar.set_prefix(prefix.as_str());
+        progress_bar.set_prefix(format!("Thread {}", i).as_str());
 
         thread::spawn(move || {
             child_tx

@@ -1,4 +1,4 @@
-use super::vec3::Vec3;
+use super::Vec3;
 
 pub struct Intersection {
     position: Vec3,

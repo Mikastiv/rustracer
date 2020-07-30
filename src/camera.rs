@@ -1,6 +1,6 @@
 use super::math;
-use super::vec3::Vec3;
-use super::ray::Ray;
+use super::Vec3;
+use super::Ray;
 
 #[derive(Clone)]
 pub struct Camera {
