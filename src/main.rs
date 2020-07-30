@@ -95,12 +95,18 @@ fn main() {
 
     let thread_count = 8;
     let section_height = IMG_HEIGHT / thread_count;
+    let last_section_extra_pixels = IMG_HEIGHT % thread_count;
     let pool = ThreadPool::new(thread_count as usize);
     let (tx, rx) = channel();
 
     for i in 0..thread_count {
         let local_camera = camera.clone();
         let child_tx = tx.clone();
+        let surface_height = if i == thread_count - 1 {
+            section_height + last_section_extra_pixels
+        } else {
+            section_height
+        };
 
         pool.execute(move || {
             child_tx
@@ -108,7 +114,7 @@ fn main() {
                     0,
                     i * section_height,
                     IMG_WIDTH,
-                    section_height,
+                    surface_height,
                     local_camera,
                 ))
                 .unwrap();
@@ -120,6 +126,8 @@ fn main() {
     for result in rx.iter() {
         img.merge(&result);
     }
+
+    println!("{}", IMG_HEIGHT % thread_count);
 
     img.save("image.png").unwrap();
 }
