@@ -15,8 +15,7 @@ use rgbcolor::RGBColor;
 use surface::Surface;
 use vec3::Vec3;
 
-// const ASPECT_RATIO: f32 = 16.0 / 9.0;
-const ASPECT_RATIO: f32 = 1.0;
+const ASPECT_RATIO: f32 = 16.0 / 9.0;
 const IMG_WIDTH: usize = 400;
 const IMG_HEIGHT: usize = (IMG_WIDTH as f32 / ASPECT_RATIO) as usize;
 const SAMPLE_PER_PIXEL: u32 = 50;
@@ -93,12 +92,12 @@ fn main() {
         DIST_TO_FOCUS,
     );
 
-    let thread_count = 8;
+    let thread_count = num_cpus::get();
     let section_height = IMG_HEIGHT / thread_count;
     let last_section_extra_pixels = IMG_HEIGHT % thread_count;
     let pool = ThreadPool::new(thread_count as usize);
     let (tx, rx) = channel();
-
+    
     for i in 0..thread_count {
         let local_camera = camera.clone();
         let child_tx = tx.clone();
@@ -107,27 +106,27 @@ fn main() {
         } else {
             section_height
         };
-
+        
         pool.execute(move || {
             child_tx
-                .send(render_surface(
-                    0,
-                    i * section_height,
-                    IMG_WIDTH,
-                    surface_height,
-                    local_camera,
-                ))
-                .unwrap();
+            .send(render_surface(
+                0,
+                i * section_height,
+                IMG_WIDTH,
+                surface_height,
+                local_camera,
+            ))
+            .unwrap();
         });
     }
     drop(tx);
-
-    let mut img = Surface::new(0, 0, IMG_HEIGHT, IMG_WIDTH);
+    
+    let mut img = Surface::new(0, 0,IMG_WIDTH, IMG_HEIGHT);
     for result in rx.iter() {
         img.merge(&result);
     }
-
-    println!("{}", IMG_HEIGHT % thread_count);
+    
+    println!("Using {} threads", thread_count);
 
     img.save("image.png").unwrap();
 }
