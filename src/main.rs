@@ -220,8 +220,8 @@ fn main() {
     // Note: on one of my PC, I have to lower the thread count manually from 16 to 12
     // ohterwise the console doesn't redraw each progress line over it's position, but
     // spams the console and draw new lines at every tick
-    // let thread_count = num_cpus::get();
-    let thread_count = 12;
+    let thread_count = num_cpus::get();
+    //let thread_count = 12;
 
     let section_height = IMG_HEIGHT / thread_count;
     let mut extra_pixels = IMG_HEIGHT % thread_count;
