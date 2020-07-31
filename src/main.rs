@@ -13,6 +13,7 @@ use std::{
     sync::{mpsc::channel, Arc, RwLock},
     thread, ops::Deref,
 };
+use rand::prelude::*;
 
 use camera::Camera;
 use hittable::Hittable;
@@ -59,9 +60,9 @@ fn scale_color(color: Color) -> RGBColor {
     b = (scale * b).sqrt();
 
     RGBColor::new(
-        (255.999 * math::clamp(r, 0.0, 0.999)) as u8,
-        (255.999 * math::clamp(g, 0.0, 0.999)) as u8,
-        (255.999 * math::clamp(b, 0.0, 0.999)) as u8,
+        (256.0 * math::clamp(r, 0.0, 0.999)) as u8,
+        (256.0 * math::clamp(g, 0.0, 0.999)) as u8,
+        (256.0 * math::clamp(b, 0.0, 0.999)) as u8,
     )
 }
 
@@ -85,14 +86,15 @@ fn render_surface(
     world: Arc<RwLock<dyn Hittable>>,
     progress_bar: ProgressBar,
 ) -> Surface {
+    let mut rng = thread_rng();
     let mut surface = Surface::new(x_offset, y_offset, width, height);
     for j in 0..height {
         progress_bar.inc(1);
         for i in 0..width {
             let mut color = Color::new(0.0, 0.0, 0.0);
             for _s in 0..SAMPLE_PER_PIXEL {
-                let u = (i + x_offset) as f64 / (IMG_WIDTH - 1) as f64;
-                let v = (j + y_offset) as f64 / (IMG_HEIGHT - 1) as f64;
+                let u = ((i + x_offset) as f64 + rng.gen::<f64>()) / (IMG_WIDTH - 1) as f64;
+                let v = ((j + y_offset) as f64 + rng.gen::<f64>()) / (IMG_HEIGHT - 1) as f64;
                 let ray = cam.get_ray(u, v);
                 color += ray_color(ray, world.deref());
             }
