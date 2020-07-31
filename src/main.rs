@@ -9,11 +9,12 @@ mod surface;
 mod vec3;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::{
-    sync::{mpsc::channel, Arc, RwLock},
-    thread, ops::Deref,
-};
 use rand::prelude::*;
+use std::{
+    ops::Deref,
+    sync::{mpsc::channel, Arc, RwLock},
+    thread,
+};
 
 use camera::Camera;
 use hittable::Hittable;
@@ -66,11 +67,22 @@ fn scale_color(color: Color) -> RGBColor {
     )
 }
 
-fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>) -> Color {
+fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>, depth: u32) -> Color {
+    if depth == 0 {
+        return Color::new(0.0, 0.0, 0.0);
+    }
+
     let world_data = world.read().unwrap();
 
     if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
-        0.5 * (intersection.normal * Color::new(1.0, 1.0, 1.0))
+        let target = intersection.point
+            + intersection.normal
+            + Vec3::random_in_hemisphere(intersection.normal);
+        let bounced_ray = Ray::new(
+            intersection.point,
+            (target - intersection.point).normalize(),
+        );
+        0.5 * ray_color(bounced_ray, world, depth - 1)
     } else {
         let t = 0.5 * (ray.dir.y + 1.0);
         (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.4, 0.6, 1.0)
@@ -88,16 +100,19 @@ fn render_surface(
 ) -> Surface {
     let mut rng = thread_rng();
     let mut surface = Surface::new(x_offset, y_offset, width, height);
+
     for j in 0..height {
         progress_bar.inc(1);
         for i in 0..width {
             let mut color = Color::new(0.0, 0.0, 0.0);
+
             for _s in 0..SAMPLE_PER_PIXEL {
                 let u = ((i + x_offset) as f64 + rng.gen::<f64>()) / (IMG_WIDTH - 1) as f64;
                 let v = ((j + y_offset) as f64 + rng.gen::<f64>()) / (IMG_HEIGHT - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, world.deref());
+                color += ray_color(ray, world.deref(), MAX_DEPTH);
             }
+
             surface.set_color(i, j, scale_color(color));
         }
     }
@@ -121,7 +136,7 @@ fn main() {
     {
         let mut world_data = world.write().unwrap();
         let sphere1 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
-        let sphere2 = Sphere::new(Vec3::new(0.0, -100.0, -50.0), 100.0);
+        let sphere2 = Sphere::new(Vec3::new(0.0, -100.0, -10.0), 100.0);
         world_data.add(Box::new(sphere1));
         world_data.add(Box::new(sphere2));
     }
@@ -129,7 +144,7 @@ fn main() {
     // If I use more than 12 threads, the program crashed on my PC
     let available_threads = num_cpus::get();
     let thread_count = if available_threads > 12 {
-        12
+        10
     } else {
         available_threads
     };

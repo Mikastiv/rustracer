@@ -29,7 +29,7 @@ impl Hittable for Sphere {
                 if temp < t_max && temp > t_min {
                     let t = temp;
                     let point = ray.at(t);
-                    let outward_normal = (point - self.center) / self.radius;
+                    let outward_normal = ((point - self.center) / self.radius).normalize();
                     let (front_face, normal) = Intersection::get_face_normal(ray, outward_normal);
                     return Some(Intersection {
                         point,
@@ -45,7 +45,7 @@ impl Hittable for Sphere {
                 if temp < t_max && temp > t_min {
                     let t = temp;
                     let point = ray.at(t);
-                    let outward_normal = (point - self.center) / self.radius;
+                    let outward_normal = ((point - self.center) / self.radius).normalize();
                     let (front_face, normal) = Intersection::get_face_normal(ray, outward_normal);
                     return Some(Intersection {
                         point,
