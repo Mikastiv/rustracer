@@ -2,6 +2,7 @@ use crate::ray::Ray;
 use crate::vec3::Vec3;
 use crate::material::Material;
 
+#[allow(clippy::borrowed_box)]
 pub struct Intersection<'a> {
     pub point: Vec3,
     pub normal: Vec3,
@@ -25,5 +26,5 @@ impl Intersection<'_> {
 }
 
 pub trait Hittable {
-    fn hit<'a>(&'a self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection<'a>>;
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection>;
 }

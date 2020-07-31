@@ -50,9 +50,12 @@ impl Camera {
 
     pub fn get_ray(&self, s: f64, t: f64) -> Ray {
         let rd = self.lens_radius * Vec3::random_vector_in_unit_disk();
-        //let offset = self.u * rd.x + self.v * rd.y;
-        let dir = (self.lower_left_corner + s * self.horizontal - t * self.vertical - self.origin)
-            .normalize(); /*- offset*/
-        Ray::new(self.origin /*+ offset*/, dir)
+        let offset = self.u * rd.x + self.v * rd.y;
+        let dir = (self.lower_left_corner + s * self.horizontal
+            - t * self.vertical
+            - self.origin
+            - offset)
+            .normalize();
+        Ray::new(self.origin + offset, dir)
     }
 }

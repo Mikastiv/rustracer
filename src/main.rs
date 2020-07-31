@@ -20,23 +20,27 @@ use std::{
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
-use material::{Lambertian, Material, Metal};
+use material::{Dielectric, Lambertian, Metal};
 use ray::Ray;
 use rgbcolor::RGBColor;
 use sphere::Sphere;
 use surface::Surface;
 use vec3::{Color, Vec3};
 
+// Update tick rate of each progress bars (in pixel)
+// Every X pixel rendered, tick once
+const PROGRESS_BARS_TICK_RATE: usize = 30;
+
 const ASPECT_RATIO: f32 = 16.0 / 9.0;
-const IMG_WIDTH: usize = 400;
+const IMG_WIDTH: usize = 1200;
 const IMG_HEIGHT: usize = (IMG_WIDTH as f32 / ASPECT_RATIO) as usize;
-const SAMPLE_PER_PIXEL: u32 = 50;
+const SAMPLE_PER_PIXEL: u32 = 500;
 const MAX_DEPTH: u32 = 50;
 
 const VFOV: f64 = 20.0;
 const EYE: Vec3 = Vec3 {
-    x: 0.0,
-    y: 0.0,
+    x: 13.0,
+    y: 2.0,
     z: 3.0,
 };
 const LOOKAT: Vec3 = Vec3 {
@@ -51,6 +55,81 @@ const UP: Vec3 = Vec3 {
 };
 const DIST_TO_FOCUS: f64 = 10.0;
 const APERTURE: f64 = 0.1;
+
+fn random_scene() -> HittableList {
+    let mut world = HittableList::new();
+    let mut rng = thread_rng();
+
+    let ground_material = Box::new(Lambertian {
+        albedo: Color::new(0.5, 0.5, 0.5),
+    });
+    world.add(Box::new(Sphere::new(
+        Vec3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        ground_material,
+    )));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat = rng.gen::<f64>();
+            let center = Vec3::new(
+                a as f64 + 0.9 * rng.gen::<f64>(),
+                0.2,
+                b as f64 + 0.9 * rng.gen::<f64>(),
+            );
+
+            if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    let albedo = Vec3::random_color() * Vec3::random_color();
+                    world.add(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Box::new(Lambertian { albedo }),
+                    )));
+                } else if choose_mat < 0.95 {
+                    let albedo = Vec3::random_color_range(0.5, 1.0);
+                    let fuzz = rng.gen_range(0.0, 0.5);
+                    world.add(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Box::new(Metal { albedo, fuzz }),
+                    )));
+                } else {
+                    world.add(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Box::new(Dielectric { ref_idx: 1.5 }),
+                    )));
+                }
+            }
+        }
+    }
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(0.0, 1.0, 0.0),
+        1.0,
+        Box::new(Dielectric { ref_idx: 1.5 }),
+    )));
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(-4.0, 1.0, 0.0),
+        1.0,
+        Box::new(Lambertian {
+            albedo: Color::new(0.4, 0.2, 0.1),
+        }),
+    )));
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(4.0, 1.0, 0.0),
+        1.0,
+        Box::new(Metal {
+            albedo: Color::new(0.7, 0.6, 0.5),
+            fuzz: 0.0,
+        }),
+    )));
+
+    world
+}
 
 fn scale_color(color: Color) -> RGBColor {
     let mut r = color.x;
@@ -99,11 +178,16 @@ fn render_surface(
 ) -> Surface {
     let mut rng = thread_rng();
     let mut surface = Surface::new(x_offset, y_offset, width, height);
-
+    
     for j in 0..height {
+        progress_bar.set_message(format!("Rendering scanline #{}", j + 1).as_str());
         progress_bar.inc(1);
         for i in 0..width {
             let mut color = Color::new(0.0, 0.0, 0.0);
+
+            if i % PROGRESS_BARS_TICK_RATE == 0 {
+                progress_bar.tick();
+            }
 
             for _s in 0..SAMPLE_PER_PIXEL {
                 let u = ((i + x_offset) as f64 + rng.gen::<f64>()) / (IMG_WIDTH - 1) as f64;
@@ -131,36 +215,12 @@ fn main() {
         DIST_TO_FOCUS,
     );
 
-    let world = Arc::new(RwLock::new(HittableList::new()));
-    {
-        let mut world_data = world.write().unwrap();
+    let world = Arc::new(RwLock::new(random_scene()));
 
-        let material_ground = Box::new(Lambertian {
-            albedo: Color::new(0.8, 0.8, 0.0),
-        });
-        let material_center = Box::new(Lambertian {
-            albedo: Color::new(0.7, 0.3, 0.3),
-        });
-        let material_left = Box::new(Metal {
-            albedo: Color::new(0.8, 0.8, 0.8),
-            fuzz: 0.3,
-        });
-        let material_right = Box::new(Metal {
-            albedo: Color::new(0.8, 0.6, 0.2),
-            fuzz: 1.0,
-        });
-
-        let sphere1 = Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, material_ground);
-        let sphere2 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, material_center);
-        let sphere3 = Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, material_left);
-        let sphere4 = Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, material_right);
-        world_data.add(Box::new(sphere1));
-        world_data.add(Box::new(sphere2));
-        world_data.add(Box::new(sphere3));
-        world_data.add(Box::new(sphere4));
-    }
-
-    //let thread_count = num_cpus::get();
+    // Note: on one of my PC, I have to lower the thread count manually from 16 to 12
+    // ohterwise the console doesn't redraw each progress line over it's position, but
+    // spams the console and draw new lines at every tick
+    // let thread_count = num_cpus::get();
     let thread_count = 12;
 
     let section_height = IMG_HEIGHT / thread_count;
@@ -169,10 +229,10 @@ fn main() {
 
     println!("Using {} threads", thread_count);
 
-    // Progress bar setup
+    // Multi Progress bar setup
     let multi_progress = MultiProgress::new();
     let progress_style = ProgressStyle::default_bar()
-        .template("[{elapsed_precise}] {prefix:>10}: {bar:40.cyan/blue} {pos:>5}/{len:5} {msg}")
+        .template("[{elapsed_precise}] {prefix:>10}: {bar:40.yellow/cyan} {pos:>5}/{len:5} {msg}")
         .progress_chars("=>-");
 
     let mut height_offset = 0;
@@ -192,7 +252,6 @@ fn main() {
 
         let progress_bar = multi_progress.add(ProgressBar::new(surface_height as u64));
         progress_bar.set_style(progress_style.clone());
-        progress_bar.set_message("Scanlines remaining");
         progress_bar.set_prefix(format!("Thread {}", i).as_str());
 
         thread::spawn(move || {
@@ -220,5 +279,5 @@ fn main() {
         img.merge(&result);
     }
 
-    img.save("image.png").unwrap();
+    img.save("output.png").unwrap();
 }

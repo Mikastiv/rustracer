@@ -20,7 +20,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit<'a>(&'a self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection<'a>> {
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
         let oc = ray.origin - self.center;
         let a = ray.dir.length_sq();
         let half_b = oc.dot(ray.dir);
