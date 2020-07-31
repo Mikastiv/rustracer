@@ -1,6 +1,7 @@
 mod camera;
 mod hittable;
 mod hittable_list;
+mod material;
 mod math;
 mod ray;
 mod rgbcolor;
@@ -19,6 +20,7 @@ use std::{
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
+use material::{Lambertian, Material, Metal};
 use ray::Ray;
 use rgbcolor::RGBColor;
 use sphere::Sphere;
@@ -75,14 +77,11 @@ fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>, depth: u32) -> Color {
     let world_data = world.read().unwrap();
 
     if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
-        let target = intersection.point
-            + intersection.normal
-            + Vec3::random_in_hemisphere(intersection.normal);
-        let bounced_ray = Ray::new(
-            intersection.point,
-            (target - intersection.point).normalize(),
-        );
-        0.5 * ray_color(bounced_ray, world, depth - 1)
+        if let Some((attenuation, scattered)) = intersection.material.scatter(ray, &intersection) {
+            attenuation * ray_color(scattered, world, depth - 1)
+        } else {
+            Color::new(0.0, 0.0, 0.0)
+        }
     } else {
         let t = 0.5 * (ray.dir.y + 1.0);
         (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.4, 0.6, 1.0)
@@ -135,19 +134,34 @@ fn main() {
     let world = Arc::new(RwLock::new(HittableList::new()));
     {
         let mut world_data = world.write().unwrap();
-        let sphere1 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
-        let sphere2 = Sphere::new(Vec3::new(0.0, -100.0, -10.0), 100.0);
+
+        let material_ground = Box::new(Lambertian {
+            albedo: Color::new(0.8, 0.8, 0.0),
+        });
+        let material_center = Box::new(Lambertian {
+            albedo: Color::new(0.7, 0.3, 0.3),
+        });
+        let material_left = Box::new(Metal {
+            albedo: Color::new(0.8, 0.8, 0.8),
+            fuzz: 0.3,
+        });
+        let material_right = Box::new(Metal {
+            albedo: Color::new(0.8, 0.6, 0.2),
+            fuzz: 1.0,
+        });
+
+        let sphere1 = Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, material_ground);
+        let sphere2 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, material_center);
+        let sphere3 = Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, material_left);
+        let sphere4 = Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, material_right);
         world_data.add(Box::new(sphere1));
         world_data.add(Box::new(sphere2));
+        world_data.add(Box::new(sphere3));
+        world_data.add(Box::new(sphere4));
     }
 
-    // If I use more than 12 threads, the program crashed on my PC
-    let available_threads = num_cpus::get();
-    let thread_count = if available_threads > 12 {
-        10
-    } else {
-        available_threads
-    };
+    //let thread_count = num_cpus::get();
+    let thread_count = 12;
 
     let section_height = IMG_HEIGHT / thread_count;
     let mut extra_pixels = IMG_HEIGHT % thread_count;

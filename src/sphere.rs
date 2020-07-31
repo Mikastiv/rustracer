@@ -1,20 +1,26 @@
 use crate::hittable::{Hittable, Intersection};
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f64,
+    pub material: Box<dyn Material + Send + Sync>,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f64) -> Sphere {
-        Sphere { center, radius }
+    pub fn new(center: Vec3, radius: f64, material: Box<dyn Material + Send + Sync>) -> Sphere {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
+    fn hit<'a>(&'a self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection<'a>> {
         let oc = ray.origin - self.center;
         let a = ray.dir.length_sq();
         let half_b = oc.dot(ray.dir);
@@ -36,6 +42,7 @@ impl Hittable for Sphere {
                         normal,
                         t,
                         front_face,
+                        material: &self.material,
                     });
                 }
             }
@@ -52,6 +59,7 @@ impl Hittable for Sphere {
                         normal,
                         t,
                         front_face,
+                        material: &self.material,
                     });
                 }
             }
