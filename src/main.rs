@@ -178,10 +178,14 @@ fn render_surface(
 ) -> Surface {
     let mut rng = thread_rng();
     let mut surface = Surface::new(x_offset, y_offset, width, height);
-    
+
+    let mut msg_str_len = 0;
     for j in 0..height {
-        progress_bar.set_message(format!("Rendering scanline #{}", j + 1).as_str());
+        let msg = format!("Rendering scanline #{}", j + 1);
+        msg_str_len = msg.len();
+        progress_bar.set_message(msg.as_str());
         progress_bar.inc(1);
+        
         for i in 0..width {
             let mut color = Color::new(0.0, 0.0, 0.0);
 
@@ -199,7 +203,7 @@ fn render_surface(
             surface.set_color(i, j, scale_color(color));
         }
     }
-    progress_bar.finish_with_message("Done");
+    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len).as_str());
 
     surface
 }
@@ -231,6 +235,7 @@ fn main() {
 
     // Multi Progress bar setup
     let multi_progress = MultiProgress::new();
+    multi_progress.set_move_cursor(true);
     let progress_style = ProgressStyle::default_bar()
         .template("[{elapsed_precise}] {prefix:>10}: {bar:40.yellow/cyan} {pos:>5}/{len:5} {msg}")
         .progress_chars("=>-");
