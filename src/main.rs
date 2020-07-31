@@ -1,17 +1,25 @@
 mod camera;
+mod hittable;
+mod hittable_list;
 mod math;
-mod primitive;
 mod ray;
 mod rgbcolor;
+mod sphere;
 mod surface;
 mod vec3;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::{sync::mpsc::channel, thread};
+use std::{
+    sync::{mpsc::channel, Arc, RwLock},
+    thread, ops::Deref,
+};
 
 use camera::Camera;
+use hittable::Hittable;
+use hittable_list::HittableList;
 use ray::Ray;
 use rgbcolor::RGBColor;
+use sphere::Sphere;
 use surface::Surface;
 use vec3::{Color, Vec3};
 
@@ -25,7 +33,7 @@ const VFOV: f64 = 20.0;
 const EYE: Vec3 = Vec3 {
     x: 0.0,
     y: 0.0,
-    z: 10.0,
+    z: 3.0,
 };
 const LOOKAT: Vec3 = Vec3 {
     x: 0.0,
@@ -40,40 +48,31 @@ const UP: Vec3 = Vec3 {
 const DIST_TO_FOCUS: f64 = 10.0;
 const APERTURE: f64 = 0.1;
 
-fn hit(ray: Ray) -> bool {
-    let r = 1.0;
-    let oc = ray.origin - Vec3::new(0.0, 0.0, 1.0);
-    let a = ray.dir.length_sq();
-    let half_b = oc.dot(ray.dir);
-    let c = oc.length_sq() - (r * r);
-    let discriminant = (half_b * half_b) - (a * c);
-
-    discriminant > 0.0
-}
-
 fn scale_color(color: Color) -> RGBColor {
     let mut r = color.x;
     let mut g = color.y;
     let mut b = color.z;
-    
+
     let scale = 1.0 / SAMPLE_PER_PIXEL as f64;
     r = (scale * r).sqrt();
     g = (scale * g).sqrt();
     b = (scale * b).sqrt();
 
     RGBColor::new(
-        (256.0 * math::clamp(r, 0.0, 0.999)) as u8,
-        (256.0 * math::clamp(g, 0.0, 0.999)) as u8,
-        (256.0 * math::clamp(b, 0.0, 0.999)) as u8,
+        (255.999 * math::clamp(r, 0.0, 0.999)) as u8,
+        (255.999 * math::clamp(g, 0.0, 0.999)) as u8,
+        (255.999 * math::clamp(b, 0.0, 0.999)) as u8,
     )
 }
 
-fn ray_color(ray: Ray) -> Color {
-    if hit(ray) {
-        Color::new(1.0, 0.0, 0.0)
+fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>) -> Color {
+    let world_data = world.read().unwrap();
+
+    if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
+        0.5 * (intersection.normal * Color::new(1.0, 1.0, 1.0))
     } else {
         let t = 0.5 * (ray.dir.y + 1.0);
-        t * Color::new(1.0, 1.0, 1.0) + (1.0 - t) * Color::new(0.4, 0.6, 1.0)
+        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.4, 0.6, 1.0)
     }
 }
 
@@ -83,6 +82,7 @@ fn render_surface(
     width: usize,
     height: usize,
     cam: Camera,
+    world: Arc<RwLock<dyn Hittable>>,
     progress_bar: ProgressBar,
 ) -> Surface {
     let mut surface = Surface::new(x_offset, y_offset, width, height);
@@ -94,7 +94,7 @@ fn render_surface(
                 let u = (i + x_offset) as f64 / (IMG_WIDTH - 1) as f64;
                 let v = (j + y_offset) as f64 / (IMG_HEIGHT - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray);
+                color += ray_color(ray, world.deref());
             }
             surface.set_color(i, j, scale_color(color));
         }
@@ -114,6 +114,15 @@ fn main() {
         APERTURE,
         DIST_TO_FOCUS,
     );
+
+    let world = Arc::new(RwLock::new(HittableList::new()));
+    {
+        let mut world_data = world.write().unwrap();
+        let sphere1 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
+        let sphere2 = Sphere::new(Vec3::new(0.0, -100.0, -50.0), 100.0);
+        world_data.add(Box::new(sphere1));
+        world_data.add(Box::new(sphere2));
+    }
 
     // If I use more than 12 threads, the program crashed on my PC
     let available_threads = num_cpus::get();
@@ -138,6 +147,7 @@ fn main() {
     let mut height_offset = 0;
     for i in 0..thread_count {
         let local_camera = camera.clone();
+        let local_world = world.clone();
 
         let child_tx = tx.clone();
 
@@ -162,6 +172,7 @@ fn main() {
                     IMG_WIDTH,
                     surface_height,
                     local_camera,
+                    local_world,
                     progress_bar,
                 ))
                 .unwrap();

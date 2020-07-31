@@ -1,6 +1,6 @@
-use super::math;
-use super::Vec3;
-use super::Ray;
+use crate::math;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
 
 #[derive(Clone)]
 pub struct Camera {
@@ -40,7 +40,7 @@ impl Camera {
             origin: eye,
             horizontal,
             vertical,
-            lower_left_corner: eye - horizontal / 2.0 - vertical / 2.0 - focus_dist * w,
+            lower_left_corner: eye - horizontal / 2.0 + vertical / 2.0 - focus_dist * w,
             u,
             v,
             w,
@@ -52,8 +52,8 @@ impl Camera {
         let rd = self.lens_radius * Vec3::random_vector_in_unit_disk();
         let offset = self.u * rd.x + self.v * rd.y;
         Ray::new(
-            self.origin + offset,
-            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset,
+            self.origin, /*+ offset*/
+            self.lower_left_corner + s * self.horizontal - t * self.vertical - self.origin, /*- offset*/
         )
     }
 }
