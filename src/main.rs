@@ -31,28 +31,16 @@ use vec3::{Color, Vec3};
 // Every X pixel rendered, tick once
 const PROGRESS_BARS_TICK_RATE: usize = 30;
 
-const ASPECT_RATIO: f32 = 16.0 / 9.0;
+const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMG_WIDTH: usize = 1200;
-const IMG_HEIGHT: usize = (IMG_WIDTH as f32 / ASPECT_RATIO) as usize;
+const IMG_HEIGHT: usize = (IMG_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLE_PER_PIXEL: u32 = 500;
-const MAX_DEPTH: u32 = 50;
+const MAX_DEPTH: u32 = 40;
 
 const VFOV: f64 = 20.0;
-const EYE: Vec3 = Vec3 {
-    x: 13.0,
-    y: 2.0,
-    z: 3.0,
-};
-const LOOKAT: Vec3 = Vec3 {
-    x: 0.0,
-    y: 0.0,
-    z: 0.0,
-};
-const UP: Vec3 = Vec3 {
-    x: 0.0,
-    y: 1.0,
-    z: 0.0,
-};
+const EYE: Vec3 = Vec3::new(13.0, 2.0, 3.0);
+const LOOKAT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+const UP: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 const DIST_TO_FOCUS: f64 = 10.0;
 const APERTURE: f64 = 0.1;
 
@@ -185,7 +173,7 @@ fn render_surface(
         msg_str_len = msg.len();
         progress_bar.set_message(msg.as_str());
         progress_bar.inc(1);
-        
+
         for i in 0..width {
             let mut color = Color::new(0.0, 0.0, 0.0);
 
@@ -203,37 +191,36 @@ fn render_surface(
             surface.set_color(i, j, scale_color(color));
         }
     }
-    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len).as_str());
+    // 4 is length of str "Done"
+    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len - 4).as_str());
 
     surface
 }
 
 fn main() {
-    let camera = Camera::new(
-        EYE,
-        LOOKAT,
-        UP,
-        ASPECT_RATIO as f64,
-        VFOV,
-        APERTURE,
-        DIST_TO_FOCUS,
-    );
-
     let world = Arc::new(RwLock::new(random_scene()));
+    let camera = Camera::new(EYE, LOOKAT, UP, ASPECT_RATIO, VFOV, APERTURE, DIST_TO_FOCUS);
 
     // Note: on one of my PC, I have to lower the thread count manually from 16 to 12
     // ohterwise the console doesn't redraw each progress line over it's position, but
     // spams the console and draw new lines at every tick
-    let thread_count = num_cpus::get();
-    //let thread_count = 12;
+    // let thread_count = num_cpus::get();
+    let thread_count = 8;
+    println!("Using {} threads", thread_count);
 
+    // Each thread renders an image wide strip of the final image like shown below
+    // --------------------------------------
+    // |                                    |
+    // --------------------------------------
+    // |                                    |
+    // --------------------------------------
+    // |                                    |
+    // --------------------------------------
     let section_height = IMG_HEIGHT / thread_count;
     let mut extra_pixels = IMG_HEIGHT % thread_count;
     let (tx, rx) = channel();
 
-    println!("Using {} threads", thread_count);
-
-    // Multi Progress bar setup
+    // Multi progress bars setup
     let multi_progress = MultiProgress::new();
     multi_progress.set_move_cursor(true);
     let progress_style = ProgressStyle::default_bar()
@@ -255,6 +242,7 @@ fn main() {
             section_height
         };
 
+        // Individual progress bar setup
         let progress_bar = multi_progress.add(ProgressBar::new(surface_height as u64));
         progress_bar.set_style(progress_style.clone());
         progress_bar.set_prefix(format!("Thread {}", i).as_str());
@@ -279,6 +267,7 @@ fn main() {
 
     drop(tx);
 
+    // Merge every portion of the image in output image
     let mut img = Surface::new(0, 0, IMG_WIDTH, IMG_HEIGHT);
     for result in rx.iter() {
         img.merge(&result);
