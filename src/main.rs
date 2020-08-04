@@ -1,10 +1,11 @@
-mod camera;
 mod hittable;
 mod hittable_list;
 mod material;
 mod math;
+mod program_args;
 mod ray;
 mod rgbcolor;
+mod scene;
 mod sphere;
 mod surface;
 mod vec3;
@@ -12,17 +13,22 @@ mod vec3;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rand::prelude::*;
 use std::{
+    env,
+    fs::File,
+    io::Read,
     ops::Deref,
+    process,
     sync::{mpsc::channel, Arc, RwLock},
     thread,
 };
 
-use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
 use material::{Dielectric, Lambertian, Metal};
+use program_args::ProgramArgs;
 use ray::Ray;
 use rgbcolor::RGBColor;
+use scene::{Camera, Scene, SceneConfig};
 use sphere::Sphere;
 use surface::Surface;
 use vec3::{Color, Vec3};
@@ -197,15 +203,72 @@ fn render_surface(
     surface
 }
 
-fn main() {
-    let world = Arc::new(RwLock::new(random_scene()));
-    let camera = Camera::new(EYE, LOOKAT, UP, ASPECT_RATIO, VFOV, APERTURE, DIST_TO_FOCUS);
+fn parse_file(file_path: &str) -> Result<SceneConfig, String> {
+    let file = match File::open(file_path) {
+        Ok(file) => file,
+        Err(err) => return Err(format!("{} [File -> {}]", err.to_string(), file_path)),
+    };
 
-    // Note: on one of my PC, I have to lower the thread count manually from 16 to 12
-    // ohterwise the console doesn't redraw each progress line over it's position, but
-    // spams the console and draw new lines at every tick
-    // let thread_count = num_cpus::get();
-    let thread_count = 8;
+    // let mut json_data = String::new();
+    // if let Err(err) = file.read_to_string(&mut json_data) {
+    //     return Err(format!("{} [File -> {}]", err.to_string(), file_path));
+    // }
+
+    match serde_json::from_reader(file) {
+        Ok(data) => Ok(data),
+        Err(err) => Err(format!("{} [File -> {}]", err.to_string(), file_path)),
+    }
+}
+
+fn parse_args() -> Result<ProgramArgs, String> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        Err(format!(
+            "Usage: {} scene_config_file.json job_count",
+            &args[0]
+        ))
+    } else {
+        let file_path = args[1].clone();
+        match args[2].parse() {
+            Ok(job_count) => Ok(ProgramArgs {
+                file_path,
+                job_count,
+            }),
+            Err(_) => Err("Job count must be an unsigned number".to_string()),
+        }
+    }
+}
+
+fn get_job_count(arg: usize) -> usize {
+    let available_threads = num_cpus::get();
+    if arg == 0 || arg > available_threads {
+        available_threads
+    } else {
+        arg
+    }
+}
+
+fn main() {
+    let args = match parse_args() {
+        Ok(args) => args,
+        Err(err) => {
+            eprintln!("{}", err);
+            process::exit(1);
+        }
+    };
+
+    let scene_config: SceneConfig = match parse_file(args.file_path.as_str()) {
+        Ok(config) => config,
+        Err(err) => {
+            eprintln!("{}", err);
+            process::exit(1);
+        }
+    };
+
+    let camera = Camera::new(EYE, LOOKAT, UP, ASPECT_RATIO, VFOV, APERTURE, DIST_TO_FOCUS);
+    let world = Scene::new(scene_config, camera, random_scene());
+
+    let thread_count = get_job_count(args.job_count);
     println!("Using {} threads", thread_count);
 
     // Each thread renders an image wide strip of the final image like shown below
@@ -216,6 +279,7 @@ fn main() {
     // --------------------------------------
     // |                                    |
     // --------------------------------------
+    
     let section_height = IMG_HEIGHT / thread_count;
     let mut extra_pixels = IMG_HEIGHT % thread_count;
     let (tx, rx) = channel();
@@ -229,8 +293,8 @@ fn main() {
 
     let mut height_offset = 0;
     for i in 0..thread_count {
-        let local_camera = camera.clone();
-        let local_world = world.clone();
+        let local_camera = world.get_camera();
+        let objects = world.get_objects();
 
         let child_tx = tx.clone();
 
@@ -255,7 +319,7 @@ fn main() {
                     IMG_WIDTH,
                     surface_height,
                     local_camera,
-                    local_world,
+                    objects,
                     progress_bar,
                 ))
                 .unwrap();

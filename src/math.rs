@@ -6,7 +6,7 @@ pub fn degrees_to_radians(degrees: f64) -> f64 {
 }
 
 #[inline]
-pub fn clamp(value: f64, min: f64, max: f64) -> f64 {
+pub fn clamp<T: std::cmp::PartialOrd>(value: T, min: T, max: T) -> T {
     assert!(min <= max);
     let mut x = value;
     if x < min {

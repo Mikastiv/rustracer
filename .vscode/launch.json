@@ -9,7 +9,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/rustracer.exe",
-            "args": [],
+            "args": ["scene.json", "12"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

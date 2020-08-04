@@ -1,4 +1,6 @@
-#[derive(Debug, Copy, Clone, Default)]
+use serde::Deserialize;
+
+#[derive(Debug, Copy, Clone, Default, Deserialize)]
 pub struct RGBColor {
     pub r: u8,
     pub g: u8,

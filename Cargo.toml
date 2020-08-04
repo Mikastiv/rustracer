@@ -11,3 +11,5 @@ rand = ""
 image = ""
 num_cpus = ""
 indicatif = ""
+serde = { version = "", features = ["derive"] }
+serde_json = ""

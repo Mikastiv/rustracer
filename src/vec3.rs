@@ -2,9 +2,11 @@
 use rand::Rng;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use serde::Deserialize;
+
 pub type Color = Vec3;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
