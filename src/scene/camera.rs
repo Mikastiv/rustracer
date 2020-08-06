@@ -23,7 +23,7 @@ impl Camera {
         vfov: f64,
         aperture: f64,
         focus_dist: f64,
-    ) -> Camera {
+    ) -> Self {
         let theta = math::degrees_to_radians(vfov);
         let h = (theta / 2.0).tan();
         let viewport_height = 2.0 * h;
@@ -36,7 +36,7 @@ impl Camera {
         let horizontal = focus_dist * viewport_width * u;
         let vertical = focus_dist * viewport_height * v;
 
-        Camera {
+        Self {
             origin: eye,
             horizontal,
             vertical,

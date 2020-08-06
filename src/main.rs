@@ -1,9 +1,9 @@
 mod hittable;
-mod hittable_list;
 mod material;
 mod math;
 mod program_args;
 mod ray;
+mod render_options;
 mod rgbcolor;
 mod scene;
 mod sphere;
@@ -15,40 +15,22 @@ use rand::prelude::*;
 use std::{
     env,
     fs::File,
-    io::Read,
     ops::Deref,
     process,
     sync::{mpsc::channel, Arc, RwLock},
     thread,
 };
 
-use hittable::Hittable;
-use hittable_list::HittableList;
+use hittable::{Hittable, HittableList};
 use material::{Dielectric, Lambertian, Metal};
 use program_args::ProgramArgs;
 use ray::Ray;
+use render_options::RenderOptions;
 use rgbcolor::RGBColor;
-use scene::{Camera, Scene, SceneConfig};
+use scene::{Camera, Config, Scene};
 use sphere::Sphere;
 use surface::Surface;
 use vec3::{Color, Vec3};
-
-// Update tick rate of each progress bars (in pixel)
-// Every X pixel rendered, tick once
-const PROGRESS_BARS_TICK_RATE: usize = 30;
-
-const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMG_WIDTH: usize = 1200;
-const IMG_HEIGHT: usize = (IMG_WIDTH as f64 / ASPECT_RATIO) as usize;
-const SAMPLE_PER_PIXEL: u32 = 500;
-const MAX_DEPTH: u32 = 40;
-
-const VFOV: f64 = 20.0;
-const EYE: Vec3 = Vec3::new(13.0, 2.0, 3.0);
-const LOOKAT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
-const UP: Vec3 = Vec3::new(0.0, 1.0, 0.0);
-const DIST_TO_FOCUS: f64 = 10.0;
-const APERTURE: f64 = 0.1;
 
 fn random_scene() -> HittableList {
     let mut world = HittableList::new();
@@ -125,12 +107,12 @@ fn random_scene() -> HittableList {
     world
 }
 
-fn scale_color(color: Color) -> RGBColor {
+fn scale_color(color: Color, spp: u32) -> RGBColor {
     let mut r = color.x;
     let mut g = color.y;
     let mut b = color.z;
 
-    let scale = 1.0 / SAMPLE_PER_PIXEL as f64;
+    let scale = 1.0 / spp as f64;
     r = (scale * r).sqrt();
     g = (scale * g).sqrt();
     b = (scale * b).sqrt();
@@ -164,14 +146,14 @@ fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>, depth: u32) -> Color {
 fn render_surface(
     x_offset: usize,
     y_offset: usize,
-    width: usize,
     height: usize,
+    options: RenderOptions,
     cam: Camera,
     world: Arc<RwLock<dyn Hittable>>,
     progress_bar: ProgressBar,
 ) -> Surface {
     let mut rng = thread_rng();
-    let mut surface = Surface::new(x_offset, y_offset, width, height);
+    let mut surface = Surface::new(x_offset, y_offset, options.img_width, height);
 
     let mut msg_str_len = 0;
     for j in 0..height {
@@ -180,21 +162,22 @@ fn render_surface(
         progress_bar.set_message(msg.as_str());
         progress_bar.inc(1);
 
-        for i in 0..width {
+        for i in 0..options.img_width {
             let mut color = Color::new(0.0, 0.0, 0.0);
 
-            if i % PROGRESS_BARS_TICK_RATE == 0 {
+            if i % options.progress_tick_rate == 0 {
                 progress_bar.tick();
             }
 
-            for _s in 0..SAMPLE_PER_PIXEL {
-                let u = ((i + x_offset) as f64 + rng.gen::<f64>()) / (IMG_WIDTH - 1) as f64;
-                let v = ((j + y_offset) as f64 + rng.gen::<f64>()) / (IMG_HEIGHT - 1) as f64;
+            for _s in 0..options.sample_per_pixel {
+                let u = ((i + x_offset) as f64 + rng.gen::<f64>()) / (options.img_width - 1) as f64;
+                let v =
+                    ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, world.deref(), MAX_DEPTH);
+                color += ray_color(ray, world.deref(), options.max_depth);
             }
 
-            surface.set_color(i, j, scale_color(color));
+            surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
         }
     }
     // 4 is length of str "Done"
@@ -203,16 +186,11 @@ fn render_surface(
     surface
 }
 
-fn parse_file(file_path: &str) -> Result<SceneConfig, String> {
+fn parse_file(file_path: &str) -> Result<Config, String> {
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(err) => return Err(format!("{} [File -> {}]", err.to_string(), file_path)),
     };
-
-    // let mut json_data = String::new();
-    // if let Err(err) = file.read_to_string(&mut json_data) {
-    //     return Err(format!("{} [File -> {}]", err.to_string(), file_path));
-    // }
 
     match serde_json::from_reader(file) {
         Ok(data) => Ok(data),
@@ -257,7 +235,7 @@ fn main() {
         }
     };
 
-    let scene_config: SceneConfig = match parse_file(args.file_path.as_str()) {
+    let cfg: Config = match parse_file(args.file_path.as_str()) {
         Ok(config) => config,
         Err(err) => {
             eprintln!("{}", err);
@@ -265,8 +243,7 @@ fn main() {
         }
     };
 
-    let camera = Camera::new(EYE, LOOKAT, UP, ASPECT_RATIO, VFOV, APERTURE, DIST_TO_FOCUS);
-    let world = Scene::new(scene_config, camera, random_scene());
+    let scene = Scene::new(&cfg, random_scene());
 
     let thread_count = get_job_count(args.job_count);
     println!("Using {} threads", thread_count);
@@ -279,9 +256,9 @@ fn main() {
     // --------------------------------------
     // |                                    |
     // --------------------------------------
-    
-    let section_height = IMG_HEIGHT / thread_count;
-    let mut extra_pixels = IMG_HEIGHT % thread_count;
+    let section_height = cfg.img_height / thread_count;
+    let mut extra_pixels = cfg.img_height % thread_count;
+
     let (tx, rx) = channel();
 
     // Multi progress bars setup
@@ -292,9 +269,16 @@ fn main() {
         .progress_chars("=>-");
 
     let mut height_offset = 0;
+    let render_options = RenderOptions::new(
+        cfg.progress_tick_rate,
+        cfg.img_width,
+        cfg.img_height,
+        cfg.sample_per_pixel,
+        cfg.max_depth,
+    );
     for i in 0..thread_count {
-        let local_camera = world.get_camera();
-        let objects = world.get_objects();
+        let camera = scene.get_camera();
+        let objects = scene.get_objects();
 
         let child_tx = tx.clone();
 
@@ -316,9 +300,9 @@ fn main() {
                 .send(render_surface(
                     0,
                     height_offset,
-                    IMG_WIDTH,
                     surface_height,
-                    local_camera,
+                    render_options,
+                    camera,
                     objects,
                     progress_bar,
                 ))
@@ -332,7 +316,7 @@ fn main() {
     drop(tx);
 
     // Merge every portion of the image in output image
-    let mut img = Surface::new(0, 0, IMG_WIDTH, IMG_HEIGHT);
+    let mut img = Surface::new(0, 0, render_options.img_width, render_options.img_height);
     for result in rx.iter() {
         img.merge(&result);
     }

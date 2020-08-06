@@ -2,7 +2,7 @@ use serde::Deserialize;
 use crate::rgbcolor::RGBColor;
 use crate::math::clamp;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Background {
     color1: RGBColor,
     color2: RGBColor,

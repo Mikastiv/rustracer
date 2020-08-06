@@ -2,11 +2,11 @@ use serde::Deserialize;
 use crate::vec3::Vec3;
 use crate::scene::background::Background;
 
-#[derive(Deserialize)]
-pub struct SceneConfig {
+#[derive(Deserialize, Clone)]
+pub struct Config {
     pub progress_tick_rate: usize,
-    pub aspect_ratio: f64,
     pub img_width: usize,
+    pub img_height: usize,
     pub sample_per_pixel: u32,
     pub max_depth: u32,
     pub v_fov: f64,
