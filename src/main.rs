@@ -181,7 +181,13 @@ fn render_surface(
                 let v =
                     ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, world.deref(), &options, j + y_offset, options.max_depth);
+                color += ray_color(
+                    ray,
+                    world.deref(),
+                    &options,
+                    j + y_offset,
+                    options.max_depth,
+                );
             }
 
             surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
@@ -304,22 +310,26 @@ fn main() {
         progress_bar.set_prefix(format!("Thread {}", i).as_str());
 
         thread::spawn(move || {
-            child_tx
-                .send(render_surface(
-                    0,
-                    height_offset,
-                    surface_height,
-                    render_options,
-                    camera,
-                    objects,
-                    progress_bar,
-                ))
-                .unwrap();
+            if let Err(err) = child_tx.send(render_surface(
+                0,
+                height_offset,
+                surface_height,
+                render_options,
+                camera,
+                objects,
+                progress_bar,
+            )) {
+                eprintln!("{}", err);
+            }
         });
 
         height_offset += surface_height;
     }
-    multi_progress.join().unwrap();
+
+    if let Err(err) = multi_progress.join() {
+        eprintln!("{}", err);
+    };
+
     drop(tx);
 
     // Merge every portion of the image in output image
@@ -328,5 +338,7 @@ fn main() {
         img.merge(&result);
     }
 
-    img.save("output.png").unwrap();
+    if let Err(err) = img.save("output.png") {
+        eprintln!("{}", err);
+    }
 }
