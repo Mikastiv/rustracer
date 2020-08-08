@@ -6,8 +6,8 @@ use std::sync::{Arc, RwLock};
 
 pub use self::camera::Camera;
 pub use self::config::Config;
+pub use self::background::Background;
 
-use self::background::Background;
 use crate::hittable::HittableList;
 
 #[derive(Clone)]
@@ -18,7 +18,6 @@ pub struct Scene {
     pub max_depth: u32,
     camera: Camera,
     objects: Arc<RwLock<HittableList>>,
-    background: Background,
 }
 
 impl Scene {
@@ -40,7 +39,6 @@ impl Scene {
             max_depth: config.max_depth,
             camera,
             objects: Arc::new(RwLock::new(objects)),
-            background: config.background.clone(),
         }
     }
 

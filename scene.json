@@ -1,9 +1,9 @@
 {
   "progress_tick_rate": 25,
-  "aspect_ratio": 1.777777777777777777777,
   "img_width": 1920,
+  "img_height": 1080,
   "sample_per_pixel": 500,
-  "max_depth": 50,
+  "max_depth": 10,
   "v_fov": 20.0,
   "eye": {
     "x": 13.0,

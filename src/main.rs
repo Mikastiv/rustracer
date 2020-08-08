@@ -124,7 +124,13 @@ fn scale_color(color: Color, spp: u32) -> RGBColor {
     )
 }
 
-fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>, depth: u32) -> Color {
+fn ray_color(
+    ray: Ray,
+    world: &RwLock<dyn Hittable>,
+    options: &RenderOptions,
+    y: usize,
+    depth: u32,
+) -> Color {
     if depth == 0 {
         return Color::new(0.0, 0.0, 0.0);
     }
@@ -133,13 +139,14 @@ fn ray_color(ray: Ray, world: &RwLock<dyn Hittable>, depth: u32) -> Color {
 
     if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
         if let Some((attenuation, scattered)) = intersection.material.scatter(ray, &intersection) {
-            attenuation * ray_color(scattered, world, depth - 1)
+            attenuation * ray_color(scattered, world, &options, y, depth - 1)
         } else {
             Color::new(0.0, 0.0, 0.0)
         }
     } else {
-        let t = 0.5 * (ray.dir.y + 1.0);
-        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.4, 0.6, 1.0)
+        options
+            .background
+            .get_color(y as f64 / options.img_height as f64)
     }
 }
 
@@ -174,7 +181,7 @@ fn render_surface(
                 let v =
                     ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, world.deref(), options.max_depth);
+                color += ray_color(ray, world.deref(), &options, j + y_offset, options.max_depth);
             }
 
             surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
@@ -275,6 +282,7 @@ fn main() {
         cfg.img_height,
         cfg.sample_per_pixel,
         cfg.max_depth,
+        cfg.background,
     );
     for i in 0..thread_count {
         let camera = scene.get_camera();
@@ -312,7 +320,6 @@ fn main() {
         height_offset += surface_height;
     }
     multi_progress.join().unwrap();
-
     drop(tx);
 
     // Merge every portion of the image in output image
