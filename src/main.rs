@@ -11,13 +11,7 @@ mod vec3;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rand::prelude::*;
-use std::{
-    env,
-    fs::File,
-    process,
-    sync::{mpsc::channel, Arc, RwLock},
-    thread,
-};
+use std::{env, fs::File, process, sync::mpsc::channel, thread};
 
 use hittable::{Hittable, HittableList};
 use material::Material;
@@ -25,8 +19,7 @@ use program_args::ProgramArgs;
 use ray::Ray;
 use render_options::RenderOptions;
 use rgbcolor::RGBColor;
-use scene::{Camera, Config, Scene};
-// use sphere::Sphere;
+use scene::{Camera, Config, HittableListBox, Scene};
 use surface::Surface;
 use vec3::{Color, Vec3};
 
@@ -124,7 +117,7 @@ fn scale_color(color: Color, spp: u32) -> RGBColor {
 
 fn ray_color(
     ray: Ray,
-    world: &RwLock<HittableList>,
+    world: &HittableListBox,
     options: &RenderOptions,
     y: usize,
     depth: u32,
@@ -133,7 +126,7 @@ fn ray_color(
         return Color::new(0.0, 0.0, 0.0);
     }
 
-    let world_data = world.read().unwrap();
+    let world_data = unsafe { &*world.0 };
 
     if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
         if let Some((attenuation, scattered)) = intersection.material.scatter(ray, &intersection) {
@@ -154,7 +147,7 @@ fn render_surface(
     height: usize,
     options: RenderOptions,
     cam: Camera,
-    world: Arc<RwLock<HittableList>>,
+    world: HittableListBox,
     progress_bar: ProgressBar,
 ) -> Surface {
     let mut rng = thread_rng();
