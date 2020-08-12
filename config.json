@@ -1,7 +1,7 @@
 {
   "progress_tick_rate": 25,
-  "img_width": 1920,
-  "img_height": 1080,
+  "img_width": 200,
+  "img_height": 100,
   "sample_per_pixel": 500,
   "max_depth": 50,
   "v_fov": 20.0,
