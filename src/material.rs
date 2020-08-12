@@ -13,20 +13,20 @@ pub enum Material {
 
 impl Material {
     pub fn scatter(&self, ray: Ray, intersection: &Intersection) -> Option<(Color, Ray)> {
-        match self {
+        match *self {
             Self::Lambertian { albedo } => {
                 let scatter_dir = (intersection.normal + Vec3::random_unit_vector()).normalize();
                 let scattered = Ray::new(intersection.point, scatter_dir);
-                let attenuation = *albedo;
+                let attenuation = albedo;
                 Some((attenuation, scattered))
             }
             Self::Metal { albedo, fuzz } => {
                 let reflected = reflect(ray.dir, intersection.normal);
                 let scattered = Ray::new(
                     intersection.point,
-                    reflected + *fuzz * Vec3::random_vector_in_unit_sphere(),
+                    reflected + fuzz * Vec3::random_vector_in_unit_sphere(),
                 );
-                let attenuation = *albedo;
+                let attenuation = albedo;
 
                 if scattered.dir.dot(intersection.normal) > 0.0 {
                     Some((attenuation, scattered))
@@ -37,9 +37,9 @@ impl Material {
             Self::Dielectric { ref_idx } => {
                 let attenuation = Color::new(1.0, 1.0, 1.0);
                 let etai_over_etat = if intersection.front_face {
-                    1.0 / *ref_idx
+                    1.0 / ref_idx
                 } else {
-                    *ref_idx
+                    ref_idx
                 };
 
                 let cos_t = -ray.dir.dot(intersection.normal).min(1.0);
