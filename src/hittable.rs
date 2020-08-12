@@ -1,36 +1,77 @@
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
-use crate::material::Material;
 
-#[allow(clippy::borrowed_box)]
-pub struct Intersection<'a> {
-    pub point: Vec3,
-    pub normal: Vec3,
-    pub t: f64,
-    pub front_face: bool,
-    pub material: &'a Box<dyn Material + Send + Sync + 'a>
+pub enum Hittable {
+    Sphere {
+        center: Vec3,
+        radius: f64,
+        material: Material,
+    },
 }
 
-impl Intersection<'_> {
-    #[inline]
-    pub fn get_face_normal(ray: Ray, outward_normal: Vec3) -> (bool, Vec3) {
-        let front_face = ray.dir.dot(outward_normal) < 0.0;
-        let normal = if front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+impl Hittable {
+    pub fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
+        match self {
+            Self::Sphere {
+                center,
+                radius,
+                material,
+            } => {
+                let oc = ray.origin - *center;
+                let a = ray.dir.length_sq();
+                let half_b = oc.dot(ray.dir);
+                let c = oc.length_sq() - radius.powi(2);
+                let discriminant = (half_b * half_b) - (a * c);
 
-        (front_face, normal)
+                if discriminant > 0.0 {
+                    let root = discriminant.sqrt();
+
+                    {
+                        let temp = (-half_b - root) / a;
+                        if temp < t_max && temp > t_min {
+                            let t = temp;
+                            let point = ray.at(t);
+                            let outward_normal = ((point - *center) / radius.clone()).normalize();
+                            let (front_face, normal) =
+                                Intersection::get_face_normal(ray, outward_normal);
+                            return Some(Intersection {
+                                point,
+                                normal,
+                                t,
+                                front_face,
+                                material,
+                            });
+                        }
+                    }
+
+                    {
+                        let temp = (-half_b + root) / a;
+                        if temp < t_max && temp > t_min {
+                            let t = temp;
+                            let point = ray.at(t);
+                            let outward_normal = ((point - *center) / radius.clone()).normalize();
+                            let (front_face, normal) =
+                                Intersection::get_face_normal(ray, outward_normal);
+                            return Some(Intersection {
+                                point,
+                                normal,
+                                t,
+                                front_face,
+                                material,
+                            });
+                        }
+                    }
+                }
+
+                None
+            }
+        }
     }
 }
 
-pub trait Hittable {
-    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection>;
-}
-
 pub struct HittableList {
-    objects: Vec<Box<dyn Hittable + Send + Sync>>,
+    objects: Vec<Hittable>,
 }
 
 impl HittableList {
@@ -40,13 +81,11 @@ impl HittableList {
         }
     }
 
-    pub fn add(&mut self, object: Box<dyn Hittable + Send + Sync>) {
+    pub fn add(&mut self, object: Hittable) {
         self.objects.push(object);
     }
-}
 
-impl Hittable for HittableList {
-    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
+    pub fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
         let mut closest = t_max;
         let mut intersection_out = None;
 
@@ -63,5 +102,27 @@ impl Hittable for HittableList {
         }
 
         intersection_out
+    }
+}
+
+pub struct Intersection<'a> {
+    pub point: Vec3,
+    pub normal: Vec3,
+    pub t: f64,
+    pub front_face: bool,
+    pub material: &'a Material,
+}
+
+impl Intersection<'_> {
+    #[inline]
+    pub fn get_face_normal(ray: Ray, outward_normal: Vec3) -> (bool, Vec3) {
+        let front_face = ray.dir.dot(outward_normal) < 0.0;
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+
+        (front_face, normal)
     }
 }

@@ -3,7 +3,7 @@ use crate::rgbcolor::RGBColor;
 use crate::vec3::Color;
 use crate::math::clamp;
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Background {
     color1: RGBColor,
     color2: RGBColor,

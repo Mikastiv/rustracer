@@ -6,7 +6,6 @@ mod ray;
 mod render_options;
 mod rgbcolor;
 mod scene;
-mod sphere;
 mod surface;
 mod vec3;
 
@@ -15,20 +14,19 @@ use rand::prelude::*;
 use std::{
     env,
     fs::File,
-    ops::Deref,
     process,
     sync::{mpsc::channel, Arc, RwLock},
     thread,
 };
 
 use hittable::{Hittable, HittableList};
-use material::{Dielectric, Lambertian, Metal};
+use material::Material;
 use program_args::ProgramArgs;
 use ray::Ray;
 use render_options::RenderOptions;
 use rgbcolor::RGBColor;
 use scene::{Camera, Config, Scene};
-use sphere::Sphere;
+// use sphere::Sphere;
 use surface::Surface;
 use vec3::{Color, Vec3};
 
@@ -36,14 +34,14 @@ fn random_scene() -> HittableList {
     let mut world = HittableList::new();
     let mut rng = thread_rng();
 
-    let ground_material = Box::new(Lambertian {
+    let ground_material = Material::Lambertian {
         albedo: Color::new(0.5, 0.5, 0.5),
+    };
+    world.add(Hittable::Sphere {
+        center: Vec3::new(0.0, -1000.0, 0.0),
+        radius: 1000.0,
+        material: ground_material,
     });
-    world.add(Box::new(Sphere::new(
-        Vec3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        ground_material,
-    )));
 
     for a in -11..11 {
         for b in -11..11 {
@@ -57,52 +55,52 @@ fn random_scene() -> HittableList {
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random_color() * Vec3::random_color();
-                    world.add(Box::new(Sphere::new(
+                    world.add(Hittable::Sphere {
                         center,
-                        0.2,
-                        Box::new(Lambertian { albedo }),
-                    )));
+                        radius: 0.2,
+                        material: Material::Lambertian { albedo },
+                    });
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_color_range(0.5, 1.0);
                     let fuzz = rng.gen_range(0.0, 0.5);
-                    world.add(Box::new(Sphere::new(
+                    world.add(Hittable::Sphere {
                         center,
-                        0.2,
-                        Box::new(Metal { albedo, fuzz }),
-                    )));
+                        radius: 0.2,
+                        material: Material::Metal { albedo, fuzz },
+                    });
                 } else {
-                    world.add(Box::new(Sphere::new(
+                    world.add(Hittable::Sphere {
                         center,
-                        0.2,
-                        Box::new(Dielectric { ref_idx: 1.5 }),
-                    )));
+                        radius: 0.2,
+                        material: Material::Dielectric { ref_idx: 1.5 },
+                    });
                 }
             }
         }
     }
 
-    world.add(Box::new(Sphere::new(
-        Vec3::new(0.0, 1.0, 0.0),
-        1.0,
-        Box::new(Dielectric { ref_idx: 1.5 }),
-    )));
+    world.add(Hittable::Sphere {
+        center: Vec3::new(0.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Material::Dielectric { ref_idx: 1.5 },
+    });
 
-    world.add(Box::new(Sphere::new(
-        Vec3::new(-4.0, 1.0, 0.0),
-        1.0,
-        Box::new(Lambertian {
+    world.add(Hittable::Sphere {
+        center: Vec3::new(-4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Material::Lambertian {
             albedo: Color::new(0.4, 0.2, 0.1),
-        }),
-    )));
+        },
+    });
 
-    world.add(Box::new(Sphere::new(
-        Vec3::new(4.0, 1.0, 0.0),
-        1.0,
-        Box::new(Metal {
+    world.add(Hittable::Sphere {
+        center: Vec3::new(4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Material::Metal {
             albedo: Color::new(0.7, 0.6, 0.5),
             fuzz: 0.0,
-        }),
-    )));
+        },
+    });
 
     world
 }
@@ -126,7 +124,7 @@ fn scale_color(color: Color, spp: u32) -> RGBColor {
 
 fn ray_color(
     ray: Ray,
-    world: &RwLock<dyn Hittable>,
+    world: &RwLock<HittableList>,
     options: &RenderOptions,
     y: usize,
     depth: u32,
@@ -156,7 +154,7 @@ fn render_surface(
     height: usize,
     options: RenderOptions,
     cam: Camera,
-    world: Arc<RwLock<dyn Hittable>>,
+    world: Arc<RwLock<HittableList>>,
     progress_bar: ProgressBar,
 ) -> Surface {
     let mut rng = thread_rng();
@@ -181,20 +179,15 @@ fn render_surface(
                 let v =
                     ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(
-                    ray,
-                    world.deref(),
-                    &options,
-                    j + y_offset,
-                    options.max_depth,
-                );
+                color += ray_color(ray, &world, &options, j + y_offset, options.max_depth);
             }
 
             surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
         }
     }
-    // 4 is length of str "Done"
-    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len - 4).as_str());
+
+    // 5 is length of str "Done "
+    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len - 5).as_str());
 
     surface
 }
@@ -213,11 +206,17 @@ fn parse_file(file_path: &str) -> Result<Config, String> {
 
 fn parse_args() -> Result<ProgramArgs, String> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
+    if !(args.len() == 2 || args.len() == 3) {
         Err(format!(
-            "Usage: {} scene_config_file.json job_count",
+            "Usage: {} scene_config_file.json job_count (note: job_count is optional)",
             &args[0]
         ))
+    } else if args.len() == 2 {
+        let file_path = args[1].clone();
+        Ok(ProgramArgs {
+            file_path,
+            job_count: 0,
+        })
     } else {
         let file_path = args[1].clone();
         match args[2].parse() {
@@ -233,7 +232,7 @@ fn parse_args() -> Result<ProgramArgs, String> {
 fn get_job_count(arg: usize) -> usize {
     let available_threads = num_cpus::get();
     if arg == 0 || arg > available_threads {
-        available_threads
+        available_threads - 1
     } else {
         arg
     }
@@ -281,7 +280,6 @@ fn main() {
         .template("[{elapsed_precise}] {prefix:>10}: {bar:40.yellow/cyan} {pos:>5}/{len:5} {msg}")
         .progress_chars("=>-");
 
-    let mut height_offset = 0;
     let render_options = RenderOptions::new(
         cfg.progress_tick_rate,
         cfg.img_width,
@@ -290,9 +288,12 @@ fn main() {
         cfg.max_depth,
         cfg.background,
     );
+
+    let mut height_offset = 0;
     for i in 0..thread_count {
         let camera = scene.get_camera();
         let objects = scene.get_objects();
+        let local_options = render_options.clone();
 
         let child_tx = tx.clone();
 
@@ -314,7 +315,7 @@ fn main() {
                 0,
                 height_offset,
                 surface_height,
-                render_options,
+                local_options,
                 camera,
                 objects,
                 progress_bar,

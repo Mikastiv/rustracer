@@ -24,7 +24,7 @@ impl Surface {
     }
 
     pub fn get_color(&self, x: usize, y: usize) -> RGBColor {
-        self.buffer[x + y * self.width]
+        self.buffer[x + y * self.width].clone()
     }
 
     pub fn set_color(&mut self, x: usize, y: usize, color: RGBColor) {
@@ -39,7 +39,7 @@ impl Surface {
             let dst_y = other.y_offset + src_y;
             for src_x in 0..x_len {
                 let dst_x = other.x_offset + src_x;
-                self.buffer[dst_x + dst_y * self.width] = other.buffer[src_x + src_y * other.width];
+                self.buffer[dst_x + dst_y * self.width] = other.buffer[src_x + src_y * other.width].clone();
             }
         }
     }
