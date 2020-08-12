@@ -32,7 +32,7 @@ impl Hittable {
                         if temp < t_max && temp > t_min {
                             let t = temp;
                             let point = ray.at(t);
-                            let outward_normal = ((point - *center) / radius.clone()).normalize();
+                            let outward_normal = ((point - *center) / *radius).normalize();
                             let (front_face, normal) =
                                 Intersection::get_face_normal(ray, outward_normal);
                             return Some(Intersection {
@@ -50,7 +50,7 @@ impl Hittable {
                         if temp < t_max && temp > t_min {
                             let t = temp;
                             let point = ray.at(t);
-                            let outward_normal = ((point - *center) / radius.clone()).normalize();
+                            let outward_normal = ((point - *center) / *radius).normalize();
                             let (front_face, normal) =
                                 Intersection::get_face_normal(ray, outward_normal);
                             return Some(Intersection {
