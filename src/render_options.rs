@@ -1,6 +1,6 @@
 use crate::scene::Background;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct RenderOptions {
     pub progress_tick_rate: usize,
     pub img_width: usize,

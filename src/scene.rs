@@ -8,6 +8,7 @@ pub use self::camera::Camera;
 pub use self::config::Config;
 pub use self::background::Background;
 
+// use crate::hittable::HittableList;
 use crate::hittable::HittableList;
 
 #[derive(Clone)]
