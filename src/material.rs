@@ -16,7 +16,7 @@ impl Material {
         match *self {
             Self::Lambertian { albedo } => {
                 let scatter_dir = (intersection.normal + Vec3::random_unit_vector()).normalize();
-                let scattered = Ray::new(intersection.point, scatter_dir);
+                let scattered = Ray::new(intersection.point, scatter_dir, ray.time);
                 let attenuation = albedo;
                 Some((attenuation, scattered))
             }
@@ -25,6 +25,7 @@ impl Material {
                 let scattered = Ray::new(
                     intersection.point,
                     reflected + fuzz * Vec3::random_vector_in_unit_sphere(),
+                    ray.time,
                 );
                 let attenuation = albedo;
 
@@ -47,19 +48,19 @@ impl Material {
 
                 if etai_over_etat * sin_t > 1.0 {
                     let reflected = reflect(ray.dir, intersection.normal);
-                    let scattered = Ray::new(intersection.point, reflected);
+                    let scattered = Ray::new(intersection.point, reflected, ray.time);
                     return Some((attenuation, scattered));
                 }
 
                 let reflect_prop = schlick(cos_t, etai_over_etat);
                 if rand::thread_rng().gen::<f64>() < reflect_prop {
                     let reflected = reflect(ray.dir, intersection.normal);
-                    let scattered = Ray::new(intersection.point, reflected);
+                    let scattered = Ray::new(intersection.point, reflected, ray.time);
                     return Some((attenuation, scattered));
                 }
 
                 let refracted = refract(ray.dir, intersection.normal, etai_over_etat);
-                let scattered = Ray::new(intersection.point, refracted);
+                let scattered = Ray::new(intersection.point, refracted, ray.time);
                 Some((attenuation, scattered))
             }
         }

@@ -48,8 +48,12 @@ fn random_scene() -> HittableList {
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random_color() * Vec3::random_color();
-                    world.add(Hittable::Sphere {
-                        center,
+                    let center1 = center + Vec3::new(0.0, rng.gen_range(0.0, 0.5), 0.0);
+                    world.add(Hittable::MovingSphere {
+                        center0: center,
+                        center1,
+                        time0: 0.0,
+                        time1: 1.0,
                         radius: 0.2,
                         material: Material::Lambertian { albedo },
                     });
@@ -117,7 +121,7 @@ fn scale_color(color: Color, spp: u32) -> RGBColor {
 
 fn ray_color(
     ray: Ray,
-    world: &HittableListBox,
+    world_ptr: &HittableListBox,
     options: &RenderOptions,
     y: usize,
     depth: u32,
@@ -126,11 +130,11 @@ fn ray_color(
         return Color::new(0.0, 0.0, 0.0);
     }
 
-    let world_data = unsafe { &*world.0 };
+    let world_data = unsafe { &*world_ptr.0 };
 
     if let Some(intersection) = world_data.hit(ray, 0.001, std::f64::INFINITY) {
         if let Some((attenuation, scattered)) = intersection.material.scatter(ray, &intersection) {
-            attenuation * ray_color(scattered, world, &options, y, depth - 1)
+            attenuation * ray_color(scattered, world_ptr, &options, y, depth - 1)
         } else {
             Color::new(0.0, 0.0, 0.0)
         }
@@ -147,7 +151,7 @@ fn render_surface(
     height: usize,
     options: RenderOptions,
     cam: Camera,
-    world: HittableListBox,
+    world_ptr: HittableListBox,
     progress_bar: ProgressBar,
 ) -> Surface {
     let mut rng = thread_rng();
@@ -172,7 +176,7 @@ fn render_surface(
                 let v =
                     ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, &world, &options, j + y_offset, options.max_depth);
+                color += ray_color(ray, &world_ptr, &options, j + y_offset, options.max_depth);
             }
 
             surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
@@ -285,7 +289,7 @@ fn main() {
     let mut height_offset = 0;
     for i in 0..thread_count {
         let camera = scene.get_camera();
-        let objects = scene.get_objects();
+        let world_ptr = scene.get_objects();
         let local_options = render_options.clone();
 
         let child_tx = tx.clone();
@@ -310,7 +314,7 @@ fn main() {
                 surface_height,
                 local_options,
                 camera,
-                objects,
+                world_ptr,
                 progress_bar,
             )) {
                 eprintln!("{}", err);

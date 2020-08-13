@@ -31,6 +31,8 @@ impl Scene {
             config.v_fov,
             config.aperture,
             config.dist_to_focus,
+            config.time0,
+            config.time1,
         );
 
         Self {

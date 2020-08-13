@@ -1,8 +1,8 @@
 {
   "progress_tick_rate": 25,
-  "img_width": 1920,
-  "img_height": 1080,
-  "sample_per_pixel": 500,
+  "img_width": 400,
+  "img_height": 225,
+  "sample_per_pixel": 200,
   "max_depth": 50,
   "v_fov": 20.0,
   "eye": {
@@ -22,6 +22,8 @@
   },
   "dist_to_focus": 10.0,
   "aperture": 0.1,
+  "time0": 0.0,
+  "time1": 1.0,
   "background": {
     "color1": {
       "r": 0,

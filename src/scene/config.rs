@@ -15,5 +15,7 @@ pub struct Config {
     pub up: Vec3,
     pub dist_to_focus: f64,
     pub aperture: f64,
+    pub time0: f64,
+    pub time1: f64,
     pub background: Background,
 }

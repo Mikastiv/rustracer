@@ -1,3 +1,5 @@
+use rand::{thread_rng, Rng};
+
 use crate::math;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
@@ -12,9 +14,12 @@ pub struct Camera {
     v: Vec3,
     w: Vec3,
     lens_radius: f64,
+    t0: f64,
+    t1: f64,
 }
 
 impl Camera {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         eye: Vec3,
         lookat: Vec3,
@@ -23,6 +28,8 @@ impl Camera {
         vfov: f64,
         aperture: f64,
         focus_dist: f64,
+        t0: f64,
+        t1: f64,
     ) -> Self {
         let theta = math::degrees_to_radians(vfov);
         let h = (theta / 2.0).tan();
@@ -45,6 +52,8 @@ impl Camera {
             v,
             w,
             lens_radius: aperture / 2.0,
+            t0,
+            t1,
         }
     }
 
@@ -56,6 +65,11 @@ impl Camera {
             - self.origin
             - offset)
             .normalize();
-        Ray::new(self.origin + offset, dir)
+
+        Ray::new(
+            self.origin + offset,
+            dir,
+            thread_rng().gen_range(self.t0, self.t1),
+        )
     }
 }
