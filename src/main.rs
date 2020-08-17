@@ -18,7 +18,7 @@ use std::{
     fs::File,
     process,
     sync::{mpsc::channel, Arc},
-    thread,
+    thread, io,
 };
 
 use hittable::{Hittable, HittableList};
@@ -210,16 +210,11 @@ fn render_surface(
     surface
 }
 
-fn parse_file(file_path: &str) -> Result<Config, String> {
-    let file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(err) => return Err(format!("{} [File -> {}]", err.to_string(), file_path)),
-    };
+fn parse_file(file_path: &str) -> Result<Config, io::Error> {
+    let file = File::open(file_path)?; 
 
-    match serde_json::from_reader(file) {
-        Ok(data) => Ok(data),
-        Err(err) => Err(format!("{} [File -> {}]", err.to_string(), file_path)),
-    }
+    let data = serde_json::from_reader(file)?;
+    Ok(data)
 }
 
 fn parse_args() -> Result<ProgramArgs, String> {
