@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use rand::Rng;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign, Index};
 
 use serde::Deserialize;
 
@@ -140,6 +140,19 @@ pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
 impl PartialEq for Vec3 {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y && self.z == other.z
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    fn index(&self, i: usize) -> &Self::Output {
+        match i {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Bad index for Vec3"),
+        }
     }
 }
 

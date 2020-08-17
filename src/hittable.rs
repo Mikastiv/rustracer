@@ -1,3 +1,10 @@
+pub mod hittable_list;
+pub mod intersection;
+
+pub use self::hittable_list::HittableList;
+pub use self::intersection::Intersection;
+
+use crate::axis_aligned_bb::AxisAlignedBB;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
@@ -138,65 +145,48 @@ impl Hittable {
             }
         }
     }
+
+    pub fn bounding_box(&self, t0: f64, t1: f64) -> Option<AxisAlignedBB> {
+        match self {
+            Self::Sphere {
+                center,
+                radius,
+                material: _,
+            } => {
+                let bb = AxisAlignedBB::new(
+                    *center - Vec3::new(*radius, *radius, *radius),
+                    *center + Vec3::new(*radius, *radius, *radius),
+                );
+                Some(bb)
+            }
+            Self::MovingSphere {
+                center0,
+                center1,
+                time0,
+                time1,
+                radius,
+                material: _,
+            } => {
+                let bb0 = AxisAlignedBB::new(
+                    center(*center0, *center1, *time0, *time1, t0)
+                        - Vec3::new(*radius, *radius, *radius),
+                    center(*center0, *center1, *time0, *time1, t0)
+                        + Vec3::new(*radius, *radius, *radius),
+                );
+
+                let bb1 = AxisAlignedBB::new(
+                    center(*center0, *center1, *time0, *time1, t1)
+                        - Vec3::new(*radius, *radius, *radius),
+                    center(*center0, *center1, *time0, *time1, t1)
+                        + Vec3::new(*radius, *radius, *radius),
+                );
+
+                Some(AxisAlignedBB::surrounding_box(&bb0, &bb1))
+            }
+        }
+    }
 }
 
 fn center(center0: Vec3, center1: Vec3, t0: f64, t1: f64, time: f64) -> Vec3 {
     center0 + ((time - t0) / (t1 - t0)) * (center1 - center0)
-}
-
-pub struct HittableList {
-    objects: Vec<Hittable>,
-}
-
-impl HittableList {
-    pub fn new() -> Self {
-        Self {
-            objects: Vec::new(),
-        }
-    }
-
-    pub fn add(&mut self, object: Hittable) {
-        self.objects.push(object);
-    }
-
-    pub fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<Intersection> {
-        let mut closest = t_max;
-        let mut intersection_out = None;
-
-        for object in self.objects.iter() {
-            let intersection = object.hit(ray, t_min, closest);
-
-            intersection_out = match intersection {
-                Some(hit_record) => {
-                    closest = hit_record.t;
-                    Some(hit_record)
-                }
-                None => intersection_out,
-            }
-        }
-
-        intersection_out
-    }
-}
-
-pub struct Intersection<'a> {
-    pub point: Vec3,
-    pub normal: Vec3,
-    pub t: f64,
-    pub front_face: bool,
-    pub material: &'a Material,
-}
-
-impl Intersection<'_> {
-    #[inline]
-    pub fn get_face_normal(ray: Ray, outward_normal: Vec3) -> (bool, Vec3) {
-        let front_face = ray.dir.dot(outward_normal) < 0.0;
-        let normal = if front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-
-        (front_face, normal)
-    }
 }

@@ -2,7 +2,7 @@
   "progress_tick_rate": 25,
   "img_width": 400,
   "img_height": 225,
-  "sample_per_pixel": 200,
+  "sample_per_pixel": 500,
   "max_depth": 50,
   "v_fov": 20.0,
   "eye": {

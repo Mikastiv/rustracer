@@ -7,10 +7,7 @@ pub use self::config::Config;
 pub use self::background::Background;
 
 use crate::hittable::HittableList;
-
-pub struct HittableListBox(pub *const HittableList);
-unsafe impl Send for HittableListBox{}
-unsafe impl Sync for HittableListBox{}
+use std::sync::Arc;
 
 pub struct Scene {
     pub img_width: usize,
@@ -18,7 +15,7 @@ pub struct Scene {
     pub sample_per_pixel: u32,
     pub max_depth: u32,
     camera: Camera,
-    objects: Box<HittableList>,
+    objects: Arc<HittableList>,
 }
 
 impl Scene {
@@ -41,12 +38,12 @@ impl Scene {
             sample_per_pixel: config.sample_per_pixel,
             max_depth: config.max_depth,
             camera,
-            objects: Box::new(objects),
+            objects: Arc::new(objects),
         }
     }
 
-    pub fn get_objects(&self) -> HittableListBox {
-        HittableListBox(&*self.objects)
+    pub fn get_objects(&self) -> Arc<HittableList> {
+        self.objects.clone()
     }
 
     pub fn get_camera(&self) -> Camera {
