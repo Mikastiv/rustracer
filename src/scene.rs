@@ -2,9 +2,9 @@ pub mod background;
 pub mod camera;
 pub mod config;
 
+pub use self::background::Background;
 pub use self::camera::Camera;
 pub use self::config::Config;
-pub use self::background::Background;
 
 use crate::hittable::HittableList;
 use std::sync::Arc;

@@ -16,9 +16,9 @@ use rand::prelude::*;
 use std::{
     env,
     fs::File,
-    process,
+    io, process,
     sync::{mpsc::channel, Arc},
-    thread, io,
+    thread,
 };
 
 use hittable::{Hittable, HittableList};
@@ -151,8 +151,6 @@ fn ray_color(
         return Color::new(0.0, 0.0, 0.0);
     }
 
-    // let world_data = unsafe { world_ptr.read_value() };
-
     if let Some(intersection) = world_ptr.hit(ray, 0.001, std::f64::INFINITY) {
         if let Some((attenuation, scattered)) = intersection.material.scatter(ray, &intersection) {
             attenuation * ray_color(scattered, world_ptr, &options, y, depth - 1)
@@ -197,7 +195,13 @@ fn render_surface(
                 let v =
                     ((j + y_offset) as f64 + rng.gen::<f64>()) / (options.img_height - 1) as f64;
                 let ray = cam.get_ray(u, v);
-                color += ray_color(ray, world_ptr.clone(), &options, j + y_offset, options.max_depth);
+                color += ray_color(
+                    ray,
+                    world_ptr.clone(),
+                    &options,
+                    j + y_offset,
+                    options.max_depth,
+                );
             }
 
             surface.set_color(i, j, scale_color(color, options.sample_per_pixel));
@@ -211,7 +215,7 @@ fn render_surface(
 }
 
 fn parse_file(file_path: &str) -> Result<Config, io::Error> {
-    let file = File::open(file_path)?; 
+    let file = File::open(file_path)?;
 
     let data = serde_json::from_reader(file)?;
     Ok(data)
