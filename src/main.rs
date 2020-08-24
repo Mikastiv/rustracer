@@ -1,5 +1,5 @@
 mod axis_aligned_bb;
-mod bvh_node;
+// mod bvh_node;
 mod hittable;
 mod material;
 mod math;
@@ -13,13 +13,7 @@ mod vec3;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rand::prelude::*;
-use std::{
-    env,
-    fs::File,
-    io, process,
-    sync::{mpsc::channel, Arc},
-    thread,
-};
+use std::sync::{mpsc::channel, Arc};
 
 use hittable::{Hittable, HittableList};
 use material::Material;
@@ -214,15 +208,15 @@ fn render_surface(
     surface
 }
 
-fn parse_file(file_path: &str) -> Result<Config, io::Error> {
-    let file = File::open(file_path)?;
+fn parse_file(file_path: &str) -> Result<Config, std::io::Error> {
+    let file = std::fs::File::open(file_path)?;
 
     let data = serde_json::from_reader(file)?;
     Ok(data)
 }
 
 fn parse_args() -> Result<ProgramArgs, String> {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if !(args.len() == 2 || args.len() == 3) {
         Err(format!(
             "Usage: {} config_file.json job_count (note: job_count is optional)",
@@ -260,7 +254,7 @@ fn main() {
         Ok(args) => args,
         Err(err) => {
             eprintln!("{}", err);
-            process::exit(1);
+            std::process::exit(1);
         }
     };
 
@@ -268,7 +262,7 @@ fn main() {
         Ok(config) => config,
         Err(err) => {
             eprintln!("{}", err);
-            process::exit(1);
+            std::process::exit(1);
         }
     };
 
@@ -327,7 +321,7 @@ fn main() {
         progress_bar.set_style(progress_style.clone());
         progress_bar.set_prefix(format!("Thread {}", i).as_str());
 
-        thread::spawn(move || {
+        std::thread::spawn(move || {
             if let Err(err) = child_tx.send(render_surface(
                 0,
                 height_offset,

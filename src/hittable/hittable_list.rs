@@ -5,8 +5,9 @@ use super::Hittable;
 use crate::axis_aligned_bb::AxisAlignedBB;
 use crate::ray::Ray;
 
+#[derive(Clone)]
 pub struct HittableList {
-    objects: Vec<Arc<Hittable>>,
+    pub objects: Vec<Arc<Hittable>>,
 }
 
 impl HittableList {
@@ -39,6 +40,7 @@ impl HittableList {
         intersection_out
     }
 
+    #[allow(dead_code)]
     pub fn bounding_box(&self, t0: f64, t1: f64) -> Option<AxisAlignedBB> {
         if self.objects.is_empty() {
             return None;

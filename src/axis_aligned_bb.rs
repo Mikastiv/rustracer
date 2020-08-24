@@ -7,6 +7,7 @@ pub struct AxisAlignedBB {
     max: Vec3,
 }
 
+#[allow(dead_code)]
 impl AxisAlignedBB {
     pub fn new(min: Vec3, max: Vec3) -> Self {
         Self { min, max }
@@ -57,5 +58,11 @@ impl AxisAlignedBB {
             min: small,
             max: big,
         }
+    }
+}
+
+impl Default for AxisAlignedBB {
+    fn default() -> Self {
+        Self::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 0.0))
     }
 }

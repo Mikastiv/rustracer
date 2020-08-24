@@ -1,5 +1,3 @@
-use std::cmp::min;
-
 use crate::rgbcolor::RGBColor;
 
 pub struct Surface {
@@ -32,14 +30,15 @@ impl Surface {
     }
 
     pub fn merge(&mut self, other: &Surface) {
-        let x_len = min(other.width, self.width - other.x_offset);
-        let y_len = min(other.height, self.height - other.y_offset);
+        let x_len = std::cmp::min(other.width, self.width - other.x_offset);
+        let y_len = std::cmp::min(other.height, self.height - other.y_offset);
 
         for src_y in 0..y_len {
             let dst_y = other.y_offset + src_y;
             for src_x in 0..x_len {
                 let dst_x = other.x_offset + src_x;
-                self.buffer[dst_x + dst_y * self.width] = other.buffer[src_x + src_y * other.width].clone();
+                self.buffer[dst_x + dst_y * self.width] =
+                    other.buffer[src_x + src_y * other.width].clone();
             }
         }
     }

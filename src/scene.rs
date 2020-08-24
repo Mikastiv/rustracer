@@ -7,7 +7,6 @@ pub use self::camera::Camera;
 pub use self::config::Config;
 
 use crate::hittable::HittableList;
-use std::sync::Arc;
 
 pub struct Scene {
     pub img_width: usize,
@@ -15,7 +14,7 @@ pub struct Scene {
     pub sample_per_pixel: u32,
     pub max_depth: u32,
     camera: Camera,
-    objects: Arc<HittableList>,
+    objects: std::sync::Arc<HittableList>,
 }
 
 impl Scene {
@@ -38,11 +37,11 @@ impl Scene {
             sample_per_pixel: config.sample_per_pixel,
             max_depth: config.max_depth,
             camera,
-            objects: Arc::new(objects),
+            objects: std::sync::Arc::new(objects),
         }
     }
 
-    pub fn get_objects(&self) -> Arc<HittableList> {
+    pub fn get_objects(&self) -> std::sync::Arc<HittableList> {
         self.objects.clone()
     }
 

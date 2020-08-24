@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use rand::Rng;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign, Index};
 
 use serde::Deserialize;
 
@@ -143,7 +142,7 @@ impl PartialEq for Vec3 {
     }
 }
 
-impl Index<usize> for Vec3 {
+impl std::ops::Index<usize> for Vec3 {
     type Output = f64;
 
     fn index(&self, i: usize) -> &Self::Output {
@@ -156,7 +155,7 @@ impl Index<usize> for Vec3 {
     }
 }
 
-impl Add for Vec3 {
+impl std::ops::Add for Vec3 {
     type Output = Self;
     #[inline]
     fn add(self, other: Self) -> Self {
@@ -168,7 +167,7 @@ impl Add for Vec3 {
     }
 }
 
-impl AddAssign for Vec3 {
+impl std::ops::AddAssign for Vec3 {
     #[inline]
     fn add_assign(&mut self, other: Self) {
         *self = Self {
@@ -179,7 +178,7 @@ impl AddAssign for Vec3 {
     }
 }
 
-impl Neg for Vec3 {
+impl std::ops::Neg for Vec3 {
     type Output = Self;
     #[inline]
     fn neg(self) -> Self {
@@ -191,7 +190,7 @@ impl Neg for Vec3 {
     }
 }
 
-impl Sub for Vec3 {
+impl std::ops::Sub for Vec3 {
     type Output = Self;
     #[inline]
     fn sub(self, other: Self) -> Self {
@@ -203,7 +202,7 @@ impl Sub for Vec3 {
     }
 }
 
-impl SubAssign for Vec3 {
+impl std::ops::SubAssign for Vec3 {
     #[inline]
     fn sub_assign(&mut self, other: Self) {
         *self = Self {
@@ -214,7 +213,7 @@ impl SubAssign for Vec3 {
     }
 }
 
-impl Mul<f64> for Vec3 {
+impl std::ops::Mul<f64> for Vec3 {
     type Output = Self;
     #[inline]
     fn mul(self, other: f64) -> Self {
@@ -226,7 +225,7 @@ impl Mul<f64> for Vec3 {
     }
 }
 
-impl MulAssign<f64> for Vec3 {
+impl std::ops::MulAssign<f64> for Vec3 {
     #[inline]
     fn mul_assign(&mut self, other: f64) {
         *self = Self {
@@ -237,7 +236,7 @@ impl MulAssign<f64> for Vec3 {
     }
 }
 
-impl Mul<Vec3> for Vec3 {
+impl std::ops::Mul<Vec3> for Vec3 {
     type Output = Self;
     #[inline]
     fn mul(self, other: Vec3) -> Self {
@@ -249,7 +248,7 @@ impl Mul<Vec3> for Vec3 {
     }
 }
 
-impl MulAssign<Vec3> for Vec3 {
+impl std::ops::MulAssign<Vec3> for Vec3 {
     #[inline]
     fn mul_assign(&mut self, other: Vec3) {
         *self = Self {
@@ -260,7 +259,7 @@ impl MulAssign<Vec3> for Vec3 {
     }
 }
 
-impl Mul<Vec3> for f64 {
+impl std::ops::Mul<Vec3> for f64 {
     type Output = Vec3;
     #[inline]
     fn mul(self, other: Vec3) -> Vec3 {
@@ -272,7 +271,7 @@ impl Mul<Vec3> for f64 {
     }
 }
 
-impl Div<f64> for Vec3 {
+impl std::ops::Div<f64> for Vec3 {
     type Output = Self;
     #[inline]
     fn div(self, other: f64) -> Self {
@@ -284,7 +283,7 @@ impl Div<f64> for Vec3 {
     }
 }
 
-impl DivAssign<f64> for Vec3 {
+impl std::ops::DivAssign<f64> for Vec3 {
     #[inline]
     fn div_assign(&mut self, other: f64) {
         *self = Self {
@@ -295,7 +294,7 @@ impl DivAssign<f64> for Vec3 {
     }
 }
 
-impl Div<Vec3> for Vec3 {
+impl std::ops::Div<Vec3> for Vec3 {
     type Output = Self;
     #[inline]
     fn div(self, other: Vec3) -> Self {
@@ -307,7 +306,7 @@ impl Div<Vec3> for Vec3 {
     }
 }
 
-impl DivAssign<Vec3> for Vec3 {
+impl std::ops::DivAssign<Vec3> for Vec3 {
     #[inline]
     fn div_assign(&mut self, other: Vec3) {
         *self = Self {

@@ -40,17 +40,22 @@ impl Hittable {
                 time1,
                 radius,
                 material,
-            } => moving_sphere_hit(*center0, *center1, *time0, *time1, *radius, material, ray, t_min, t_max)
+            } => moving_sphere_hit(
+                (*center0, *center1),
+                (*time0, *time1),
+                *radius,
+                material,
+                ray,
+                t_min,
+                t_max,
+            ),
         }
     }
 
+    #[allow(dead_code)]
     pub fn bounding_box(&self, t0: f64, t1: f64) -> Option<AxisAlignedBB> {
         match self {
-            Self::Sphere {
-                center,
-                radius,
-                material: _,
-            } => {
+            Self::Sphere { center, radius, .. } => {
                 let bb = AxisAlignedBB::new(
                     *center - Vec3::new(*radius, *radius, *radius),
                     *center + Vec3::new(*radius, *radius, *radius),
@@ -63,7 +68,7 @@ impl Hittable {
                 time0,
                 time1,
                 radius,
-                material: _,
+                ..
             } => {
                 let bb0 = AxisAlignedBB::new(
                     center(*center0, *center1, *time0, *time1, t0)
@@ -141,16 +146,17 @@ fn sphere_hit(
 }
 
 fn moving_sphere_hit(
-    center0: Vec3,
-    center1: Vec3,
-    time0: f64,
-    time1: f64,
+    centers: (Vec3, Vec3),
+    times: (f64, f64),
     radius: f64,
     material: &Material,
     ray: Ray,
     t_min: f64,
     t_max: f64,
 ) -> Option<Intersection> {
+    let (center0, center1) = centers;
+    let (time0, time1) = times;
+
     let oc = ray.origin - center(center0, center1, time0, time1, ray.time);
     let a = ray.dir.length_sq();
     let half_b = oc.dot(ray.dir);
