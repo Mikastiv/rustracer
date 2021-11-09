@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use crate::math::clamp;
 use crate::rgbcolor::RGBColor;
 use crate::vec3::Color;
-use crate::math::clamp;
+use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct Background {

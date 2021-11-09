@@ -69,7 +69,7 @@ impl Camera {
         Ray::new(
             self.origin + offset,
             dir,
-            thread_rng().gen_range(self.t0, self.t1),
+            thread_rng().gen_range(self.t0..=self.t1),
         )
     }
 }

@@ -28,9 +28,9 @@ impl Vec3 {
     pub fn random_color_range(min: f64, max: f64) -> Color {
         let mut rng = rand::thread_rng();
         Color {
-            x: rng.gen_range(min, max),
-            y: rng.gen_range(min, max),
-            z: rng.gen_range(min, max),
+            x: rng.gen_range(min..=max),
+            y: rng.gen_range(min..=max),
+            z: rng.gen_range(min..=max),
         }
     }
 
@@ -41,9 +41,9 @@ impl Vec3 {
     pub fn random_vec3_range(min: f64, max: f64) -> Vec3 {
         let mut rng = rand::thread_rng();
         Vec3 {
-            x: rng.gen_range(min, max),
-            y: rng.gen_range(min, max),
-            z: rng.gen_range(min, max),
+            x: rng.gen_range(min..=max),
+            y: rng.gen_range(min..=max),
+            z: rng.gen_range(min..=max),
         }
     }
 
@@ -60,8 +60,8 @@ impl Vec3 {
         let mut rng = rand::thread_rng();
         loop {
             let p = Vec3 {
-                x: rng.gen_range(-1.0, 1.0),
-                y: rng.gen_range(-1.0, 1.0),
+                x: rng.gen_range(-1.0..=1.0),
+                y: rng.gen_range(-1.0..=1.0),
                 z: 0.0,
             };
 
@@ -75,8 +75,8 @@ impl Vec3 {
 
     pub fn random_unit_vector() -> Vec3 {
         let mut rng = rand::thread_rng();
-        let a: f64 = rng.gen_range(0.0, 2.0 * std::f64::consts::PI);
-        let z: f64 = rng.gen_range(-1.0, 1.0);
+        let a: f64 = rng.gen_range(0.0..=2.0 * std::f64::consts::PI);
+        let z: f64 = rng.gen_range(-1.0..=1.0);
         let r: f64 = (1.0 - z * z).sqrt();
         Vec3 {
             x: r * a.cos(),

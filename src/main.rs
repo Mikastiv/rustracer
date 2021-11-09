@@ -52,7 +52,7 @@ fn random_scene() -> HittableList {
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random_color() * Vec3::random_color();
-                    let center1 = center + Vec3::new(0.0, rng.gen_range(0.0, 0.5), 0.0);
+                    let center1 = center + Vec3::new(0.0, rng.gen_range(0.0..=0.5), 0.0);
 
                     let sphere = Hittable::MovingSphere {
                         center0: center,
@@ -66,7 +66,7 @@ fn random_scene() -> HittableList {
                     world.add(Arc::new(sphere));
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_color_range(0.5, 1.0);
-                    let fuzz = rng.gen_range(0.0, 0.5);
+                    let fuzz = rng.gen_range(0.0..=0.5);
 
                     let sphere = Hittable::Sphere {
                         center,
@@ -203,7 +203,8 @@ fn render_surface(
     }
 
     // 5 is length of str "Done "
-    progress_bar.finish_with_message(format!("Done {:len$}", " ", len = msg_str_len - 5).as_str());
+    let msg = format!("Done {:len$}", " ", len = msg_str_len - 5);
+    progress_bar.finish_with_message(msg.as_str());
 
     surface
 }
@@ -319,7 +320,8 @@ fn main() {
         // Individual progress bar setup
         let progress_bar = multi_progress.add(ProgressBar::new(surface_height as u64));
         progress_bar.set_style(progress_style.clone());
-        progress_bar.set_prefix(format!("Thread {}", i).as_str());
+        let msg = format!("Thread {}", i);
+        progress_bar.set_prefix(msg.as_str());
 
         std::thread::spawn(move || {
             if let Err(err) = child_tx.send(render_surface(

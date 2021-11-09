@@ -1,6 +1,6 @@
-use crate::vec3::Vec3;
-use crate::ray::Ray;
 use crate::material::Material;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
 
 pub struct Intersection<'a> {
     pub point: Vec3,

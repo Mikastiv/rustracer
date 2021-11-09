@@ -1,6 +1,6 @@
-use serde::Deserialize;
-use crate::vec3::Vec3;
 use crate::scene::background::Background;
+use crate::vec3::Vec3;
+use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
