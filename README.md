@@ -5,3 +5,11 @@ Based on [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTr
 
 ## Final render
 ![Alt](/output.png "Render example")
+
+## Run
+
+```cargo run --release```
+
+## Config
+
+All the configuration parameters are in config.json
