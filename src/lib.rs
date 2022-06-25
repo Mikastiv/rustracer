@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use pixel_buffer::{Pixel, PixelBuffer};
 use wgpu::{include_wgsl, util::DeviceExt};
 use winit::{
@@ -75,7 +76,7 @@ struct State {
 }
 
 impl State {
-    async fn new(window: &Window) -> Self {
+    async fn new(window: &Window) -> Result<Self> {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -88,7 +89,7 @@ impl State {
                 force_fallback_adapter: false,
             })
             .await
-            .unwrap();
+            .ok_or_else(|| anyhow!("Couldn't find appropriate adapter"))?;
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -102,7 +103,9 @@ impl State {
             .unwrap();
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_preferred_format(&adapter).unwrap(),
+            format: surface
+                .get_preferred_format(&adapter)
+                .ok_or_else(|| anyhow!("Surface is incompatible with the adapter"))?,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
@@ -112,7 +115,7 @@ impl State {
         let mut pixel_buffer = PixelBuffer::new(800, 600);
         pixel_buffer.clear(Pixel::new(255, 0, 0, 0));
         let diffuse_texture =
-            texture::Texture::new(&device, &queue, &pixel_buffer, Some("Canvas")).unwrap();
+            texture::Texture::new(&device, &queue, &pixel_buffer, Some("Canvas"))?;
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -205,7 +208,7 @@ impl State {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        Self {
+        Ok(Self {
             surface,
             device,
             queue,
@@ -219,7 +222,7 @@ impl State {
             diffuse_bind_group,
             diffuse_texture,
             next_color: None,
-        }
+        })
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -291,7 +294,7 @@ pub async fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let mut state = State::new(&window).await;
+    let mut state = State::new(&window).await.unwrap();
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
