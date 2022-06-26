@@ -7,15 +7,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand = "0.8"
 image = "0.24"
-num_cpus = "1.13"
-indicatif = "0.16"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-wgpu = "0.12"
-winit = "0.26"
+egui = "0.18"
+egui-wgpu = "0.18"
+egui-winit = { version = "0.18", default-features = false, features = ["links"] }
 env_logger = "0.9"
-pollster = "0.2"
-bytemuck = { version = "1.9", features = [ "derive" ] }
-anyhow = "1.0"
+log = "0.4"
+pixels = "0.9"
+winit = "0.26"
+winit_input_helper = "0.12"
