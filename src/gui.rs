@@ -1,4 +1,4 @@
-use egui::{ClippedPrimitive, Context, TexturesDelta};
+use egui::{ClippedPrimitive, Context, TexturesDelta, Align2};
 use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
@@ -21,6 +21,7 @@ pub(crate) struct Framework {
 struct Gui {
     /// Only show the egui window when true.
     window_open: bool,
+    texture: Option<egui::TextureHandle>,
 }
 
 impl Framework {
@@ -120,21 +121,25 @@ impl Framework {
 impl Gui {
     /// Create a `Gui`.
     fn new() -> Self {
-        Self { window_open: true }
+        Self {
+            window_open: true,
+            texture: None,
+        }
     }
 
     /// Create the UI using egui.
     fn ui(&mut self, ctx: &Context) {
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("About...").clicked() {
-                        self.window_open = true;
-                        ui.close_menu();
-                    }
-                })
-            });
+        let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
+            // Load the texture only once.
+            ctx.load_texture("my-image", egui::ColorImage::example())
         });
+        egui::Area::new("Image")
+            .anchor(Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
+            .order(egui::Order::Background)
+            .show(ctx, |ui| {
+                // Shorter version:
+                ui.image(texture, egui::vec2(640.0, 480.0));
+            });
 
         egui::Window::new("Hello, egui!")
             .open(&mut self.window_open)
