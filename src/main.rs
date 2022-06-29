@@ -1,6 +1,3 @@
-#![deny(clippy::all)]
-#![forbid(unsafe_code)]
-
 use crate::gui::Framework;
 use log::error;
 use pixels::{Error, Pixels, SurfaceTexture};
@@ -170,3 +167,21 @@ impl World {
         }
     }
 }
+
+// use winit::{dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder};
+// use winit_input_helper::WinitInputHelper;
+
+// const WIDTH: u32 = 800;
+// const HEIGHT: u32 = 600;
+
+// fn main() {
+//     env_logger::init();
+//     let event_loop = EventLoop::new();
+//     let window = WindowBuilder::new()
+//         .with_title("Hello World")
+//         .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
+//         .with_min_inner_size(LogicalSize::new(WIDTH, HEIGHT))
+//         .build(&event_loop)
+//         .unwrap();
+//     let mut input = WinitInputHelper::new();
+// }

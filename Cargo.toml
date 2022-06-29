@@ -7,6 +7,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
+pollster = "0.2"
+bytemuck = "1.9"
 image = "0.24"
 egui = "0.18"
 egui-wgpu = "0.18"
